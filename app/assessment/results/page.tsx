@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 type Message = { role: 'user' | 'assistant'; content: string }
 
 type ParsedAssessment = {
@@ -18,12 +16,9 @@ type ParsedAssessment = {
   disclaimer: string
 }
 
-// ─── Urgency config ───────────────────────────────────────────────────────────
-
-const URGENCY: Record<string, { label: string; color: string; border: string; bg: string; text: string; dot: string }> = {
+const URGENCY: Record<string, { label: string; border: string; bg: string; text: string; dot: string }> = {
   EMERGENCY_DEPARTMENT_NOW: {
     label: 'Emergency Department — Now',
-    color: 'red',
     border: 'border-red-500',
     bg: 'bg-red-50',
     text: 'text-red-700',
@@ -31,7 +26,6 @@ const URGENCY: Record<string, { label: string; color: string; border: string; bg
   },
   URGENT_CARE: {
     label: 'Urgent Care',
-    color: 'orange',
     border: 'border-orange-400',
     bg: 'bg-orange-50',
     text: 'text-orange-700',
@@ -39,7 +33,6 @@ const URGENCY: Record<string, { label: string; color: string; border: string; bg
   },
   CONTACT_DOCTOR_TODAY: {
     label: 'Contact Doctor Today',
-    color: 'yellow',
     border: 'border-yellow-400',
     bg: 'bg-yellow-50',
     text: 'text-yellow-700',
@@ -47,7 +40,6 @@ const URGENCY: Record<string, { label: string; color: string; border: string; bg
   },
   MONITOR_AT_HOME: {
     label: 'Monitor at Home',
-    color: 'green',
     border: 'border-green-500',
     bg: 'bg-green-50',
     text: 'text-green-700',
@@ -67,16 +59,8 @@ const STATUS_STYLE: Record<string, { icon: string; color: string }> = {
   UNKNOWN: { icon: '?', color: 'text-slate-500 bg-slate-100 border-slate-200' },
 }
 
-// ─── Parser ───────────────────────────────────────────────────────────────────
-
 function parseAssessment(text: string): ParsedAssessment {
-  const get = (key: string) => {
-    const regex = new RegExp(`\\*{0,2}${key}\\*{0,2}[:\\s]+([\\s\\S]*?)(?=\\n\\*{0,2}[A-Z_]+\\*{0,2}:|$)`)
-    const match = text.match(regex)
-    return match ? match[1].trim() : ''
-  }
-
-  // Urgency
+  // Urgency level
   const urgencyLevel = (() => {
     if (text.includes('EMERGENCY_DEPARTMENT_NOW')) return 'EMERGENCY_DEPARTMENT_NOW'
     if (text.includes('URGENT_CARE')) return 'URGENT_CARE'
@@ -85,72 +69,84 @@ function parseAssessment(text: string): ParsedAssessment {
     return 'CONTACT_DOCTOR_TODAY'
   })()
 
-  const urgencyExplanation = get('URGENCY_EXPLANATION')
+  // Helper to extract section content
+  const getSection = (key: string): string => {
+    const patterns = [
+      new RegExp(`\\*{0,2}${key}\\*{0,2}[:\\s*]+([\\s\\S]*?)(?=\\n\\*{0,2}(?:URGENCY|DIFFERENTIAL|RED_FLAGS|NEXT_STEPS|FOLLOW_UP|$))`, 'i'),
+      new RegExp(`${key}[:\\s]+([\\s\\S]*?)(?=\\n[A-Z_]{3,}[:\\s]|$)`, 'i'),
+    ]
+    for (const pattern of patterns) {
+      const match = text.match(pattern)
+      if (match?.[1]?.trim()) return match[1].trim()
+    }
+    return ''
+  }
+
+  const urgencyExplanation = getSection('URGENCY_EXPLANATION').replace(/\*\*/g, '').replace(/^\*+|\*+$/g, '').trim()
 
   // Differential
-  const diffSection = get('DIFFERENTIAL')
+  const diffSection = getSection('DIFFERENTIAL')
   const differential = diffSection
     .split('\n')
     .filter(l => l.trim())
     .map(line => {
-      const cleaned = line.replace(/^\d+\.\s*/, '').replace(/\*\*/g, '')
-      const likelihoodMatch = cleaned.match(/^(HIGH|MODERATE|LOWER)[:\s-]+(.+?)[-–:]\s*(.+)$/i)
-      if (likelihoodMatch) {
-        return {
-          likelihood: likelihoodMatch[1].toUpperCase(),
-          name: likelihoodMatch[2].trim(),
-          reason: likelihoodMatch[3].trim(),
-        }
-      }
-      const altMatch = cleaned.match(/^(HIGH|MODERATE|LOWER)[:\s]+(.+)$/i)
-      if (altMatch) {
-        const parts = altMatch[2].split(/[-–:]/)
-        return {
-          likelihood: altMatch[1].toUpperCase(),
-          name: parts[0]?.trim() || altMatch[2],
-          reason: parts.slice(1).join(' ').trim() || '',
-        }
+      const clean = line.replace(/^\d+\.\s*/, '').replace(/\*\*/g, '').trim()
+      const m = clean.match(/^(HIGH|MODERATE|LOWER)[:\s*-]+(.+?)(?:\s*[-–:]\s*(.+))?$/i)
+      if (m) {
+        const nameParts = m[2].trim()
+        const reason = m[3]?.trim() || ''
+        return { likelihood: m[1].toUpperCase(), name: nameParts, reason }
       }
       return null
     })
     .filter(Boolean) as { likelihood: string; name: string; reason: string }[]
 
   // Red flags
-  const flagSection = get('RED_FLAGS')
+  const flagSection = getSection('RED_FLAGS')
   const redFlags = flagSection
     .split('\n')
     .filter(l => l.trim())
     .map(line => {
-      const cleaned = line.replace(/^[-•]\s*/, '').replace(/\*\*/g, '')
-      const match = cleaned.match(/^(.+?):\s*(PRESENT|ABSENT|UNKNOWN)/)
-      if (match) return { flag: match[1].trim(), status: match[2] }
-      if (cleaned.includes('PRESENT')) return { flag: cleaned.replace('PRESENT', '').replace(/[-:]/g, '').trim(), status: 'PRESENT' }
-      if (cleaned.includes('ABSENT')) return { flag: cleaned.replace('ABSENT', '').replace(/[-:]/g, '').trim(), status: 'ABSENT' }
-      if (cleaned.includes('UNKNOWN')) return { flag: cleaned.replace('UNKNOWN', '').replace(/[-:]/g, '').trim(), status: 'UNKNOWN' }
+      const clean = line.replace(/^[-•]\s*/, '').replace(/\*\*/g, '').trim()
+      const m = clean.match(/^(.+?):\s*(PRESENT|ABSENT|UNKNOWN)\s*$/i)
+      if (m) return { flag: m[1].trim(), status: m[2].toUpperCase() }
+      if (clean.match(/PRESENT/i)) return { flag: clean.replace(/PRESENT/i, '').replace(/[-:]/g, '').trim(), status: 'PRESENT' }
+      if (clean.match(/ABSENT/i)) return { flag: clean.replace(/ABSENT/i, '').replace(/[-:]/g, '').trim(), status: 'ABSENT' }
+      if (clean.match(/UNKNOWN/i)) return { flag: clean.replace(/UNKNOWN/i, '').replace(/[-:]/g, '').trim(), status: 'UNKNOWN' }
       return null
     })
-    .filter(Boolean) as { flag: string; status: string }[]
+    .filter(f => f && f.flag.length > 2) as { flag: string; status: string }[]
 
   // Next steps
-  const nextSteps = get('NEXT_STEPS').replace(/\*\*/g, '')
+  const nextSteps = getSection('NEXT_STEPS').replace(/\*\*/g, '').trim()
 
-  // Follow-up prompts
-  const followSection = get('FOLLOW_UP_PROMPTS')
-  const followUpPrompts = followSection
-    .split('\n')
-    .filter(l => l.trim().match(/^\d+\.|^[-•]/))
-    .slice(0, 3)
-    .map(l => l.replace(/^\d+\.\s*|^[-•]\s*/, '').replace(/"/g, '').trim())
-    .filter(Boolean)
+  // Follow-up prompts — multiple parsing strategies
+  const followUpPrompts = (() => {
+    const section = getSection('FOLLOW_UP_PROMPTS')
+    if (!section) {
+      // Try direct regex on full text
+      const directMatch = text.match(/FOLLOW_UP_PROMPTS[:\s*]+\n?([\s\S]*?)(?=\n\*{0,2}[A-Z]|OrixLink AI provides|$)/i)
+      if (!directMatch) return []
+      const lines = directMatch[1].split('\n').filter(l => l.trim())
+      return lines
+        .map(l => l.replace(/^\d+\.\s*|^[-•]\s*/, '').replace(/"/g, '').replace(/\*\*/g, '').trim())
+        .filter(l => l.length > 5)
+        .slice(0, 3)
+    }
+    return section
+      .split('\n')
+      .filter(l => l.trim())
+      .map(l => l.replace(/^\d+\.\s*|^[-•]\s*/, '').replace(/"/g, '').replace(/\*\*/g, '').trim())
+      .filter(l => l.length > 5)
+      .slice(0, 3)
+  })()
 
   // Disclaimer
   const disclaimerMatch = text.match(/OrixLink AI provides[\s\S]*?call 911\./)
-  const disclaimer = disclaimerMatch ? disclaimerMatch[0] : 'OrixLink AI provides clinical support only. Not a diagnosis. If this is an emergency call 911.'
+  const disclaimer = disclaimerMatch?.[0] || 'OrixLink AI provides clinical support only. Not a diagnosis. If this is an emergency call 911.'
 
   return { urgencyLevel, urgencyExplanation, differential, redFlags, nextSteps, followUpPrompts, disclaimer }
 }
-
-// ─── Components ───────────────────────────────────────────────────────────────
 
 function UrgencyBanner({ level, explanation }: { level: string; explanation: string }) {
   const cfg = URGENCY[level] || URGENCY.CONTACT_DOCTOR_TODAY
@@ -172,7 +168,7 @@ function NextStepsCard({ steps }: { steps: string }) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 mb-4">
       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Next Steps</h3>
-      <p className="text-slate-800 text-sm leading-relaxed font-medium">{steps}</p>
+      <p className="text-slate-800 text-sm leading-relaxed">{steps}</p>
     </div>
   )
 }
@@ -188,14 +184,10 @@ function DifferentialCard({ items }: { items: { likelihood: string; name: string
           return (
             <div key={i} className={`border-l-4 ${style.border} pl-3`}>
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${style.badge}`}>
-                  {item.likelihood}
-                </span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${style.badge}`}>{item.likelihood}</span>
                 <span className="text-slate-800 text-sm font-semibold">{item.name}</span>
               </div>
-              {item.reason && (
-                <p className="text-slate-500 text-xs leading-relaxed">{item.reason}</p>
-              )}
+              {item.reason && <p className="text-slate-500 text-xs leading-relaxed">{item.reason}</p>}
             </div>
           )
         })}
@@ -242,7 +234,7 @@ function ChatBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === 'user'
   if (isUser) {
     return (
-      <div className="flex justify-end mb-3">
+      <div className="flex justify-end mb-4">
         <div className="bg-teal-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] text-sm leading-relaxed">
           {msg.content}
         </div>
@@ -252,22 +244,16 @@ function ChatBubble({ msg }: { msg: Message }) {
   const assessment = parseAssessment(msg.content)
   const isStructured = assessment.differential.length > 0 || assessment.redFlags.length > 0
   if (isStructured) {
-    return (
-      <div className="mb-3">
-        <AssessmentView assessment={assessment} />
-      </div>
-    )
+    return <div className="mb-4"><AssessmentView assessment={assessment} /></div>
   }
   return (
-    <div className="flex justify-start mb-3">
-      <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%] text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+    <div className="flex justify-start mb-4">
+      <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%] text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
         {msg.content.replace(/\*\*/g, '')}
       </div>
     </div>
   )
 }
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ResultsPage() {
   const router = useRouter()
@@ -317,13 +303,13 @@ export default function ResultsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const updated = [...next, { role: 'assistant' as const, content: data.response }]
+      const updated: Message[] = [...next, { role: 'assistant', content: data.response }]
       setMessages(updated)
       const a = parseAssessment(data.response)
       setCurrentUrgency(a.urgencyLevel)
       setFollowUps(a.followUpPrompts)
     } catch {
-      setMessages([...next, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
     } finally {
       setLoading(false)
     }
@@ -333,8 +319,6 @@ export default function ResultsPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white flex flex-col">
-
-      {/* Nav */}
       <nav className="border-b border-slate-800 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <Link href="/" className="flex items-center gap-3">
           <div className="w-8 h-8 bg-teal-600 rounded-md flex items-center justify-center">
@@ -353,16 +337,13 @@ export default function ResultsPage() {
         </div>
       </nav>
 
-      {/* Body */}
       <div className="flex-1 overflow-hidden flex flex-col max-w-3xl mx-auto w-full px-4 py-6">
-
-        {/* Scrollable messages */}
         <div className="flex-1 overflow-y-auto pb-4">
           {messages.map((msg, i) => (
             <ChatBubble key={i} msg={msg} />
           ))}
           {loading && (
-            <div className="flex justify-start mb-3">
+            <div className="flex justify-start mb-4">
               <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-500">
                 Updating assessment...
               </div>
@@ -371,22 +352,23 @@ export default function ResultsPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Follow-up chips */}
         {followUps.length > 0 && !loading && (
-          <div className="flex flex-wrap gap-2 mb-3 flex-shrink-0">
-            {followUps.map((p, i) => (
-              <button
-                key={i}
-                onClick={() => send(p)}
-                className="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-2 rounded-full transition-colors"
-              >
-                {p}
-              </button>
-            ))}
+          <div className="mb-3 flex-shrink-0">
+            <p className="text-xs text-slate-500 mb-2">Tap to add to the assessment:</p>
+            <div className="flex flex-wrap gap-2">
+              {followUps.map((p, i) => (
+                <button
+                  key={i}
+                  onClick={() => send(p)}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-2 rounded-full transition-colors"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Input */}
         <div className="flex gap-3 flex-shrink-0">
           <input
             type="text"
