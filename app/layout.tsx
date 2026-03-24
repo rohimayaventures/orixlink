@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans, DM_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -6,49 +6,52 @@ import "./globals.css";
 const cormorant = Cormorant_Garamond({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const dmSans = DM_Sans({
-  variable: "--font-sans",
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 });
 
 const dmMono = DM_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["300", "400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "OrixLink AI — Where every symptom finds its answer",
   description:
-    "Universal triage and diagnosis intelligence. Any symptom, any person, any moment. No prior diagnosis required.",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "OrixLink AI",
-  },
-  formatDetection: {
-    telephone: false,
-  },
+    "Universal clinical triage and diagnosis. Any symptom. Any person. No prior diagnosis required.",
+  keywords: [
+    "symptom checker",
+    "clinical triage",
+    "AI diagnosis",
+    "healthcare AI",
+    "OrixLink",
+    "Rohimaya Health AI",
+  ],
   openGraph: {
     title: "OrixLink AI",
     description: "Where every symptom finds its answer.",
-    url: "https://triage.rohimaya.ai",
-    siteName: "OrixLink AI",
-    locale: "en_US",
     type: "website",
+    siteName: "OrixLink AI",
   },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#080C14",
-  width: "device-width",
-  initialScale: 1,
-  minimumScale: 1,
-  viewportFit: "cover",
+  twitter: {
+    card: "summary_large_image",
+    title: "OrixLink AI",
+    description: "Where every symptom finds its answer.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -57,11 +60,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body
         className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable} antialiased`}
@@ -70,15 +72,7 @@ export default function RootLayout({
         <Analytics />
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(reg) { console.log('OrixLink SW registered'); })
-                    .catch(function(err) { console.log('SW registration failed: ', err); });
-                });
-              }
-            `,
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})}`,
           }}
         />
       </body>
