@@ -258,9 +258,17 @@ export default function LandingPage() {
         <span className="font-display" style={{ color: "var(--text-muted-dark)", fontSize: "0.875rem" }}>
           OrixLink AI · <span style={{ color: "var(--gold-muted)" }}>Rohimaya Health AI</span>
         </span>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted-dark)", fontFamily: "var(--font-mono)" }}>
-          For informational use only. Not a substitute for professional medical advice.
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <Link
+            href="/legal"
+            style={{ fontSize: "0.75rem", color: "var(--gold-muted)", textDecoration: "none", fontFamily: "var(--font-mono)" }}
+          >
+            Legal
+          </Link>
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted-dark)", fontFamily: "var(--font-mono)" }}>
+            For informational use only. Not a substitute for professional medical advice.
+          </span>
+        </div>
       </footer>
     </main>
   );
