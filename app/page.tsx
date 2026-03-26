@@ -29,20 +29,15 @@ export default function LandingPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            border: "1.5px solid var(--gold-muted)", background: "var(--gold-dim)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <ActivityLogIcon style={{ color: "var(--gold)", width: 14, height: 14 }} />
-          </div>
+          <img
+            src="/OrixLink AI Logo (1).svg"
+            alt="OrixLink AI"
+            style={{ width: 32, height: 32, borderRadius: "50%" }}
+          />
           <span className="font-display" style={{ fontSize: "1.125rem", fontWeight: 500, color: "var(--text-on-dark)", letterSpacing: "0.02em" }}>
             OrixLink <span style={{ color: "var(--gold)" }}>AI</span>
           </span>
         </div>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted-dark)", fontFamily: "var(--font-mono)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-          Rohimaya Health AI
-        </span>
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
