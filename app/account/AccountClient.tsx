@@ -230,6 +230,38 @@ export default function AccountClient({
           </button>
         )}
 
+        <div style={{ marginBottom: 20 }}>
+          <p
+            style={{
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: 13,
+              color: "rgba(244,239,230,0.4)",
+              margin: "0 0 8px",
+            }}
+          >
+            Delete account
+          </p>
+          <p
+            style={{
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: 12,
+              color: "rgba(244,239,230,0.3)",
+              margin: 0,
+              lineHeight: 1.6,
+            }}
+          >
+            To permanently delete your account and all associated data, email{" "}
+            <a
+              href="mailto:support@rohimaya.ai?subject=Delete%20my%20account"
+              style={{ color: "#C8A96E", textDecoration: "underline" }}
+            >
+              support@rohimaya.ai
+            </a>{" "}
+            with the subject line &apos;Delete my account&apos;. Deletion is processed
+            within 30 days.
+          </p>
+        </div>
+
         <button
           type="button"
           className="btn-ghost-gold"

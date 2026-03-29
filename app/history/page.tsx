@@ -153,6 +153,25 @@ export default async function HistoryPage() {
             })}
           </ul>
         )}
+        <p
+          style={{
+            fontFamily: "DM Sans, sans-serif",
+            fontSize: 12,
+            color: "rgba(244,239,230,0.3)",
+            marginTop: sessions?.length ? 20 : 16,
+            marginBottom: 0,
+            lineHeight: 1.6,
+          }}
+        >
+          To export your full assessment history, email{" "}
+          <a
+            href="mailto:support@rohimaya.ai?subject=Data%20export%20request"
+            style={{ color: "#C8A96E", textDecoration: "underline" }}
+          >
+            support@rohimaya.ai
+          </a>{" "}
+          with the subject line &apos;Data export request&apos;.
+        </p>
       </div>
     </AppShell>
   );
