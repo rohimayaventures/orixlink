@@ -56,7 +56,11 @@ export default function AccountClient({
   }
 
   async function signOut() {
-    await fetch("/api/auth/signout", { method: "POST" });
+    await fetch("/api/auth/signout", {
+      method: "POST",
+      credentials: "same-origin",
+      redirect: "manual",
+    });
     router.refresh();
     window.location.href = "/";
   }

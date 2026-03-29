@@ -25,6 +25,10 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const sessionData = body.sessionData as SessionData | undefined;
+    const bodyUserId = body.userId as string | undefined;
+    if (bodyUserId && bodyUserId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     if (!sessionData?.role || !sessionData.context) {
       return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
     }

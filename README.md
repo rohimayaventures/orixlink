@@ -55,9 +55,9 @@ OrixLink reads who is asking — patient, family member, or medical professional
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
-| Styling | Tailwind CSS |
+| Styling | Tailwind CSS v4 |
 | AI | Claude API (claude-sonnet-4-20250514) |
 | Database | Supabase (Postgres + Auth + RLS) |
 | Deployment | Vercel |
@@ -82,13 +82,18 @@ cd orixlink
 npm install
 ```
 
-Create `.env.local`:
+Create `.env.local` (and mirror on Vercel):
 
 ```
 ANTHROPIC_API_KEY=your_key_here
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_SITE_URL=https://triage.rohimaya.ai
+STRIPE_SECRET_KEY=optional_for_billing_portal
 ```
+
+Enable in the Supabase dashboard: **Email/password**, **Google** OAuth (redirect URL includes `/auth/callback`). Apple OAuth can be added later.
 
 ```bash
 npm run dev

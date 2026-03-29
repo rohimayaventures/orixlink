@@ -70,7 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const res = await fetch("/api/migrate-session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionData: last }),
+            body: JSON.stringify({
+              sessionData: last,
+              userId: session.user.id,
+            }),
           });
           if (res.ok) {
             clearAnonSessionData();

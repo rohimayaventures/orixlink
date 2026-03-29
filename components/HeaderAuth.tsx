@@ -48,7 +48,11 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
   }, [user]);
 
   async function signOut() {
-    await fetch("/api/auth/signout", { method: "POST" });
+    await fetch("/api/auth/signout", {
+      method: "POST",
+      credentials: "same-origin",
+      redirect: "manual",
+    });
     router.refresh();
     window.location.href = "/";
   }

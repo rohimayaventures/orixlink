@@ -24,6 +24,7 @@ export default function AuthModal({
 
   return (
     <div
+      className="auth-modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -36,6 +37,7 @@ export default function AuthModal({
       }}
     >
       <div
+        className="auth-modal-panel"
         style={{
           position: "relative",
           width: "100%",
@@ -89,7 +91,7 @@ export default function AuthModal({
             fontFamily: "var(--font-body), sans-serif",
           }}
         >
-          Your results are waiting — they will save automatically when you sign
+          Your results are waiting -- they will save automatically when you sign
           up.
         </p>
 
@@ -148,7 +150,7 @@ export default function AuthModal({
                 message: { color: "rgba(244,239,230,0.8)" },
               },
             }}
-            providers={["google", "apple"]}
+            providers={["google"]}
             redirectTo={redirectTo}
             onlyThirdPartyProviders={false}
             magicLink={false}
