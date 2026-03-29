@@ -176,7 +176,7 @@ export default function PricingPage() {
             </div>
             <ul className="space-y-2.5 flex-1 mb-8">
               <FeatureLine ok>5 assessments / month</FeatureLine>
-              <FeatureLine ok>Haiku model (standard analysis)</FeatureLine>
+              <FeatureLine ok>Standard analysis</FeatureLine>
               <FeatureLine ok>Voice input</FeatureLine>
               <FeatureLine ok>Caregiver mode</FeatureLine>
               <FeatureLine ok>All 12 languages</FeatureLine>
@@ -239,7 +239,7 @@ export default function PricingPage() {
             </div>
             <ul className="space-y-2.5 flex-1 mb-8">
               <FeatureLine ok>150 assessments / month</FeatureLine>
-              <FeatureLine ok>Sonnet model (deep analysis)</FeatureLine>
+              <FeatureLine ok>Deep analysis</FeatureLine>
               <FeatureLine ok>Full symptom history timeline</FeatureLine>
               <FeatureLine ok>Appointment prep PDF export</FeatureLine>
               <FeatureLine ok>Follow-up reminders</FeatureLine>
