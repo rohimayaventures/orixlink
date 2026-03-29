@@ -4,6 +4,11 @@ import { useState, useEffect, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import HeaderAuth from '@/components/HeaderAuth'
+import {
+  ModelBadge,
+  ModelBadgeFreeUpgradeLink,
+} from '@/components/ModelBadge'
+import { useSubscriptionUsage } from '@/components/SubscriptionUsageProvider'
 import CapReachedPrompt, {
   type CapReachedPayload,
 } from '@/components/CapReachedPrompt'
@@ -60,6 +65,7 @@ function buildAssessFingerprint(): string {
 export default function AssessmentPage() {
   const router = useRouter()
   const { user, openAuthModal } = useAuth()
+  const { tier: subscriptionTier } = useSubscriptionUsage()
   const [step, setStep] = useState(1)
   const [role, setRole] = useState('')
   const [context, setContext] = useState('')
@@ -711,6 +717,20 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   isAnonymous={!user}
                 />
               )}
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  marginBottom: '1rem',
+                }}
+              >
+                <ModelBadge tier={user ? subscriptionTier : 'free'} />
+                {(!user || (subscriptionTier || 'free').toLowerCase() === 'free') && (
+                  <ModelBadgeFreeUpgradeLink />
+                )}
+              </div>
 
               {error && (
                 <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.45)', color: '#FCA5A5', padding: '12px 16px', borderRadius: 8, fontSize: '0.875rem', marginBottom: '1rem' }}>

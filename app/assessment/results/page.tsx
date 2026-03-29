@@ -22,6 +22,7 @@ import {
 } from '@/lib/outputLanguages'
 import { useAuth } from '@/components/AuthProvider'
 import HeaderAuth from '@/components/HeaderAuth'
+import { ModelBadge } from '@/components/ModelBadge'
 import {
   ReminderPrompt,
   type ReminderUserTier,
@@ -422,6 +423,8 @@ export default function ResultsPage() {
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
   const [showHistoryWarning, setShowHistoryWarning] = useState(false)
   const [userTier, setUserTier] = useState<ReminderUserTier>('free')
+  /** Raw subscription tier for UI (includes clinical → Deep analysis). */
+  const [analysisTier, setAnalysisTier] = useState('free')
   const [showReminderSkeleton, setShowReminderSkeleton] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -460,6 +463,7 @@ export default function ResultsPage() {
   useEffect(() => {
     if (!user || !supabase) {
       setUserTier('free')
+      setAnalysisTier('free')
       return
     }
     let cancelled = false
@@ -472,6 +476,9 @@ export default function ResultsPage() {
       if (cancelled) return
       const row = data as { tier?: string; is_lifetime?: boolean } | null
       const t = row?.tier ?? 'free'
+      const forAnalysis =
+        row?.is_lifetime || t === 'lifetime' ? 'lifetime' : t
+      setAnalysisTier(forAnalysis)
       if (row?.is_lifetime || t === 'lifetime') setUserTier('lifetime')
       else if (t === 'family') setUserTier('family')
       else if (t === 'pro') setUserTier('pro')
@@ -631,17 +638,20 @@ export default function ResultsPage() {
         </Link>
         <div className="flex min-w-0 flex-[1_1_auto] flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:flex-none sm:gap-3">
           <HeaderAuth variant="dark" omitPricing />
-          <div
-            className="inline-flex max-w-[min(100%,11rem)] shrink items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold tracking-wide sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-[0.75rem]"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              background: urgencyCfg.badgeBg,
-              border: `1px solid ${urgencyCfg.badgeBorder}`,
-              color: urgencyCfg.badgeText,
-            }}
-          >
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: urgencyCfg.dotColor, flexShrink: 0 }} />
-            <span className="truncate">{urgencyCfg.label}</span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ModelBadge tier={analysisTier} />
+            <div
+              className="inline-flex max-w-[min(100%,11rem)] shrink items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold tracking-wide sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-[0.75rem]"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                background: urgencyCfg.badgeBg,
+                border: `1px solid ${urgencyCfg.badgeBorder}`,
+                color: urgencyCfg.badgeText,
+              }}
+            >
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: urgencyCfg.dotColor, flexShrink: 0 }} />
+              <span className="truncate">{urgencyCfg.label}</span>
+            </div>
           </div>
           <Link
             href="/assessment"
