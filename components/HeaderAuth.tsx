@@ -16,18 +16,20 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
     cap: number;
     tier: string;
   } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const isDark = variant === "dark";
 
   useEffect(() => {
     if (!user) {
       setUsage(null);
+      setIsAdmin(false);
       return;
     }
     const supabase = createClient();
     const ym = new Date().toISOString().slice(0, 7);
     (async () => {
-      const [subRes, useRes] = await Promise.all([
+      const [subRes, useRes, profRes] = await Promise.all([
         supabase
           .from("subscriptions")
           .select("tier")
@@ -39,11 +41,17 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
           .eq("user_id", user.id)
           .eq("year_month", ym)
           .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .maybeSingle(),
       ]);
       const tier = (subRes.data?.tier as string) || "free";
       const used = (useRes.data?.assessments_used as number) ?? 0;
       const cap = (useRes.data?.assessments_cap as number) ?? 5;
       setUsage({ used, cap, tier });
+      setIsAdmin(Boolean(profRes.data?.is_admin));
     })();
   }, [user]);
 
@@ -147,6 +155,20 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
         </span>
         Account
       </Link>
+      {isAdmin && (
+        <Link
+          href="/admin"
+          style={{
+            fontSize: "0.75rem",
+            color: gold,
+            textDecoration: "none",
+            fontWeight: 600,
+            fontFamily: "var(--font-body), sans-serif",
+          }}
+        >
+          Admin
+        </Link>
+      )}
       <button
         type="button"
         onClick={signOut}

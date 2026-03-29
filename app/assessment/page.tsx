@@ -59,9 +59,11 @@ export default function AssessmentPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   useEffect(() => {
     sessionStorage.removeItem('orixlink_session_id')
+    setSessionId(null)
   }, [])
 
   const canProceedStep1 = role !== ''
@@ -98,6 +100,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
         body: JSON.stringify({
           messages: [{ role: 'user', content: userMessage }],
           role, context, language,
+          ...(sessionId ? { session_id: sessionId } : {}),
         }),
       })
       const data = await res.json()
@@ -112,6 +115,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
       if (!res.ok) throw new Error(data.error || 'Assessment failed')
       if (!user) markAnonAssessmentUsed()
       if (typeof data.session_id === 'string' && data.session_id) {
+        setSessionId(data.session_id)
         sessionStorage.setItem('orixlink_session_id', data.session_id)
       }
       sessionStorage.setItem('orixlink_response', data.response)

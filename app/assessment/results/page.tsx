@@ -454,6 +454,7 @@ export default function ResultsPage() {
   const [languageCode, setLanguageCode] = useState('en')
   const [apiSessionId, setApiSessionId] = useState<string | null>(null)
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
+  const [showHistoryWarning, setShowHistoryWarning] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -529,6 +530,7 @@ export default function ResultsPage() {
         return
       }
       if (!res.ok) throw new Error(data.error)
+      if (data.historyWarning === true) setShowHistoryWarning(true)
       if (typeof data.session_id === 'string' && data.session_id) {
         setApiSessionId(data.session_id)
         sessionStorage.setItem('orixlink_session_id', data.session_id)
@@ -626,6 +628,53 @@ export default function ResultsPage() {
           </Link>
         </div>
       </nav>
+
+      {showHistoryWarning && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 24px',
+            background: '#9A6B00',
+            flexShrink: 0,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontFamily: 'var(--font-body), sans-serif',
+              fontSize: 13,
+              lineHeight: 1.45,
+              color: '#F4EFE6',
+              flex: 1,
+            }}
+          >
+            Your assessment ran but could not be saved to history. Your results are shown below.
+          </p>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setShowHistoryWarning(false)}
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              border: 'none',
+              borderRadius: 8,
+              background: 'rgba(244,239,230,0.15)',
+              color: '#F4EFE6',
+              cursor: 'pointer',
+            }}
+          >
+            <Cross2Icon style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+      )}
 
       {/* ── Chat area ── */}
       <div style={{

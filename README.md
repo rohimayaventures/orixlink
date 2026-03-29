@@ -103,6 +103,12 @@ Open http://localhost:3000
 
 ---
 
+## Admin dashboard
+
+Apply Supabase migrations through **`004_admin_schema.sql`** (tiers, billing columns, `usage_tracking.updated_at`, credit metadata) and **`005_sessions_context_text_consume_credit.sql`** (free-text `sessions.context`, credit consumption skips frozen packs). Optional duplicate **`003_tighten_rls.sql`** documents session/message RLS (same drops as `003_assess_usage_rls.sql`). Set `is_admin = true` on your user in `public.profiles`. Admins can open `/admin` (middleware requires sign-in; the page checks `is_admin` and redirects others to `/`).
+
+---
+
 ## Medical Disclaimer
 
 OrixLink AI provides AI-generated clinical support information only. It is not a licensed medical provider and does not constitute a diagnosis, medical advice, or a substitute for professional medical evaluation. In any emergency, call 911 immediately.

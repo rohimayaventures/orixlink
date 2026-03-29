@@ -98,7 +98,7 @@ export default function LandingPage() {
               </button>
             </Link>
             <span style={{ fontSize: "0.8rem", color: "var(--text-muted-dark)", fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
-              No login · No data stored · Free
+              Free to start · Save your history · Sign up in seconds
             </span>
           </div>
 
@@ -106,7 +106,7 @@ export default function LandingPage() {
             <div className="divider-gold" style={{ marginBottom: "1.75rem" }} />
             <div style={{ display: "flex", flexWrap: "wrap" as const, alignItems: "center", justifyContent: "center", gap: "12px 32px" }}>
               {[
-                { icon: <LockClosedIcon />, label: "No login required" },
+                { icon: <LockClosedIcon />, label: "Free to start" },
                 { icon: <PersonIcon />, label: "Any person, any symptom" },
                 { icon: <ActivityLogIcon />, label: "AI-assisted, not AI-decided" },
               ].map(({ icon, label }) => (

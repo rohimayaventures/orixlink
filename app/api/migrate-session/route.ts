@@ -102,30 +102,6 @@ export async function POST(request: Request) {
       { onConflict: "user_id" }
     );
 
-    const yearMonth = new Date().toISOString().slice(0, 7);
-    const { data: usageRow } = await admin
-      .from("usage_tracking")
-      .select("id, assessments_used")
-      .eq("user_id", user.id)
-      .eq("year_month", yearMonth)
-      .maybeSingle();
-
-    if (usageRow) {
-      await admin
-        .from("usage_tracking")
-        .update({
-          assessments_used: (usageRow.assessments_used as number) + 1,
-        })
-        .eq("id", usageRow.id);
-    } else {
-      await admin.from("usage_tracking").insert({
-        user_id: user.id,
-        year_month: yearMonth,
-        assessments_used: 1,
-        assessments_cap: 5,
-      });
-    }
-
     return NextResponse.json({ success: true, sessionId });
   } catch (e) {
     console.error(e);

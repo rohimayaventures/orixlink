@@ -3,6 +3,7 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assessmentsCapForTier } from "@/lib/admin/tierCaps";
 import { parseUrgencyFromAssessmentText } from "@/lib/parseUrgency";
 import {
   promptLanguageName,
@@ -12,17 +13,6 @@ import {
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
-
-const VALID_CONTEXTS = new Set([
-  "recent_procedure",
-  "chronic_condition",
-  "new_symptoms",
-  "injury",
-  "pregnancy",
-  "pediatric",
-  "mental_health",
-  "other",
-]);
 
 const VALID_ROLES = new Set(["patient", "family", "clinician"]);
 
@@ -99,48 +89,48 @@ function nextPeriodStartDate(yearMonth: string): string {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-async function ensureUsageRow(
-  admin: AdminClient,
-  userId: string,
-  yearMonth: string,
-  cap: number
-) {
-  const { data: existing } = await admin
-    .from("usage_tracking")
-    .select("id, assessments_cap")
-    .eq("user_id", userId)
-    .eq("year_month", yearMonth)
-    .maybeSingle();
-
-  if (!existing) {
-    await admin.from("usage_tracking").insert({
-      user_id: userId,
-      year_month: yearMonth,
-      assessments_used: 0,
-      assessments_cap: cap,
-    });
-    return;
-  }
-  if (Number(existing.assessments_cap) !== cap) {
-    await admin
-      .from("usage_tracking")
-      .update({ assessments_cap: cap })
-      .eq("id", existing.id);
-  }
+function resolveUserCapForAttempt(
+  sub: { tier?: string | null; assessments_cap?: number | null } | null
+): number {
+  if (!sub) return 5;
+  const ac = Number(sub.assessments_cap);
+  if (Number.isFinite(ac) && ac > 0) return ac;
+  return assessmentsCapForTier(sub.tier ?? "free");
 }
 
-async function sumUserCredits(admin: AdminClient, userId: string): Promise<number> {
-  const { data: rows } = await admin
-    .from("credits")
-    .select("credits_remaining")
-    .eq("user_id", userId);
-  return (rows ?? []).reduce(
-    (s, r) => s + (Number(r.credits_remaining) || 0),
-    0
-  );
+type AttemptResult = {
+  allowed: boolean;
+  assessments_used: number;
+  assessments_cap: number;
+};
+
+function parseAllowedFlag(value: unknown): boolean | null {
+  if (value === true) return true;
+  if (value === false) return false;
+  if (value === "t" || value === "true" || value === "T") return true;
+  if (value === "f" || value === "false" || value === "F") return false;
+  return null;
+}
+
+function parseAttemptAssessmentResult(data: unknown): AttemptResult | null {
+  if (data == null) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row == null || typeof row !== "object") return null;
+  const o = row as Record<string, unknown>;
+  const allowed = parseAllowedFlag(o.allowed);
+  if (allowed === null) return null;
+  return {
+    allowed,
+    assessments_used: Number(o.assessments_used) || 0,
+    assessments_cap: Number(o.assessments_cap) || 0,
+  };
 }
 
 export async function POST(request: NextRequest) {
+  let consumedAttempt = false;
+  let rollbackUserId: string | null = null;
+  let adminForRollback: AdminClient | null = null;
+
   try {
     const body = await request.json();
     const {
@@ -189,67 +179,50 @@ export async function POST(request: NextRequest) {
 
       const { data: sub } = await admin
         .from("subscriptions")
-        .select("assessments_cap")
+        .select("tier, assessments_cap")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const capFromSub = Number(sub?.assessments_cap);
-      const assessmentsCap =
-        Number.isFinite(capFromSub) && capFromSub > 0 ? capFromSub : 5;
+      const userCap = resolveUserCapForAttempt(sub);
 
-      await ensureUsageRow(admin, user.id, yearMonth, assessmentsCap);
+      const { data: attemptData, error: attemptErr } = await admin.rpc(
+        "attempt_assessment",
+        { p_user_id: user.id, p_cap: userCap }
+      );
 
-      const { data: ut, error: utErr } = await admin
-        .from("usage_tracking")
-        .select("assessments_used, assessments_cap")
-        .eq("user_id", user.id)
-        .eq("year_month", yearMonth)
-        .single();
-
-      if (utErr || !ut) {
-        console.error("usage_tracking read", utErr);
+      if (attemptErr) {
+        console.error("attempt_assessment", attemptErr);
         return NextResponse.json(
-          { error: "Could not load usage" },
+          { error: "Could not verify usage allowance" },
           { status: 500 }
         );
       }
 
-      const used = Number(ut.assessments_used) || 0;
-      const cap = Number(ut.assessments_cap) || assessmentsCap;
-
-      if (used >= cap) {
-        const creditsRemaining = await sumUserCredits(admin, user.id);
-        if (creditsRemaining > 0) {
-          const { data: consumed, error: cErr } = await admin.rpc(
-            "consume_one_credit",
-            { p_user_id: user.id }
-          );
-          if (cErr || consumed !== true) {
-            const creditsAfter = await sumUserCredits(admin, user.id);
-            return NextResponse.json(
-              {
-                error: "cap_reached",
-                assessments_used: used,
-                assessments_cap: cap,
-                reset_date: nextPeriodStartDate(yearMonth),
-                credits_remaining: creditsAfter,
-              },
-              { status: 402 }
-            );
-          }
-        } else {
-          return NextResponse.json(
-            {
-              error: "cap_reached",
-              assessments_used: used,
-              assessments_cap: cap,
-              reset_date: nextPeriodStartDate(yearMonth),
-              credits_remaining: 0,
-            },
-            { status: 402 }
-          );
-        }
+      const ar = parseAttemptAssessmentResult(attemptData);
+      if (!ar) {
+        console.error("attempt_assessment unexpected shape", attemptData);
+        return NextResponse.json(
+          { error: "Invalid usage response" },
+          { status: 500 }
+        );
       }
+
+      if (!ar.allowed) {
+        return NextResponse.json(
+          {
+            error: "cap_reached",
+            assessments_used: ar.assessments_used,
+            assessments_cap: ar.assessments_cap,
+            reset_date: nextPeriodStartDate(yearMonth),
+            credits_remaining: 0,
+          },
+          { status: 402 }
+        );
+      }
+
+      consumedAttempt = true;
+      rollbackUserId = user.id;
+      adminForRollback = admin;
 
       if (sessionIdBody) {
         const { data: owned } = await admin
@@ -259,6 +232,7 @@ export async function POST(request: NextRequest) {
           .eq("user_id", user.id)
           .maybeSingle();
         if (!owned) {
+          await admin.rpc("rollback_assessment", { p_user_id: user.id });
           return NextResponse.json(
             { error: "Invalid session_id" },
             { status: 400 }
@@ -268,6 +242,7 @@ export async function POST(request: NextRequest) {
 
       const userContentCheck = lastUserMessageContent(messages);
       if (!userContentCheck.trim()) {
+        await admin.rpc("rollback_assessment", { p_user_id: user.id });
         return NextResponse.json(
           { error: "Last user message missing" },
           { status: 400 }
@@ -288,59 +263,119 @@ Current session context:
       content: typeof m.content === "string" ? m.content : "",
     }));
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: systemWithContext,
-      messages: anthropicMessages,
-    });
+    let responseText: string;
+    let anthropicUsage: unknown;
+    try {
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        system: systemWithContext,
+        messages: anthropicMessages,
+      });
 
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type from Claude");
+      anthropicUsage = response.usage;
+      const content = response.content[0];
+      if (content.type !== "text") {
+        throw new Error("Unexpected response type from Claude");
+      }
+      responseText = content.text;
+    } catch (claudeErr) {
+      if (consumedAttempt && rollbackUserId && adminForRollback) {
+        const { error: rbErr } = await adminForRollback.rpc(
+          "rollback_assessment",
+          { p_user_id: rollbackUserId }
+        );
+        if (rbErr) console.error("rollback_assessment", rbErr);
+      }
+      throw claudeErr;
     }
 
-    const responseText = content.text;
     let sessionIdOut: string | null = null;
+    let historyWarning = false;
 
     if (user && admin) {
-      const { error: incErr } = await admin.rpc("increment_usage_tracking", {
-        p_user_id: user.id,
-        p_year_month: yearMonth,
-      });
-      if (incErr) {
-        console.error("increment_usage_tracking", incErr);
-      }
-
       const urgency = parseUrgencyFromAssessmentText(responseText);
-      const ctx =
-        typeof context === "string" && VALID_CONTEXTS.has(context)
-          ? context
-          : "other";
+      const roleRaw =
+        typeof role === "string" && role.trim() !== "" ? role.trim() : "self";
       const roleDb =
-        typeof role === "string" && VALID_ROLES.has(role) ? role : "patient";
+        roleRaw === "self" || roleRaw === "patient"
+          ? "patient"
+          : VALID_ROLES.has(roleRaw)
+            ? roleRaw
+            : "patient";
       const langStored =
         typeof language === "string" && language.length > 0 ? language : "en";
 
       const userContent = lastUserMessageContent(messages);
+      const contextSnippet =
+        userContent.trim().length > 0
+          ? userContent.trim().slice(0, 500)
+          : "other";
 
-      if (!sessionIdBody) {
-        const { data: inserted, error: insErr } = await admin
-          .from("sessions")
-          .insert({
-            user_id: user.id,
-            role: roleDb,
-            context: ctx,
-            language: langStored,
-            urgency_level: urgency,
-          })
-          .select("id")
-          .single();
+      try {
+        if (!sessionIdBody) {
+          const { data: inserted, error: insErr } = await admin
+            .from("sessions")
+            .insert({
+              user_id: user.id,
+              role: roleDb,
+              context: contextSnippet,
+              language: langStored,
+              urgency_level: urgency,
+            })
+            .select("id")
+            .single();
 
-        if (insErr || !inserted) {
-          console.error("sessions insert", insErr);
+          if (insErr || !inserted) {
+            console.error("assess history persist: session insert failed", {
+              user_id: user.id,
+              session_content: userContent,
+              claude_response: responseText,
+              error: insErr,
+            });
+            historyWarning = true;
+          } else {
+            sessionIdOut = inserted.id as string;
+            const { error: msgErr } = await admin.from("messages").insert([
+              { session_id: sessionIdOut, role: "user", content: userContent },
+              {
+                session_id: sessionIdOut,
+                role: "assistant",
+                content: responseText,
+              },
+            ]);
+            if (msgErr) {
+              console.error("assess history persist: messages insert failed", {
+                user_id: user.id,
+                session_id: sessionIdOut,
+                session_content: userContent,
+                claude_response: responseText,
+                error: msgErr,
+              });
+              historyWarning = true;
+            }
+          }
         } else {
-          sessionIdOut = inserted.id as string;
+          sessionIdOut = sessionIdBody;
+          const { error: upErr } = await admin
+            .from("sessions")
+            .update({
+              urgency_level: urgency,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", sessionIdBody)
+            .eq("user_id", user.id);
+          if (upErr) {
+            console.error("assess history persist: session update failed", {
+              user_id: user.id,
+              session_id: sessionIdBody,
+              session_content: userContent,
+              claude_response: responseText,
+              error: upErr,
+            });
+            historyWarning = true;
+          }
+
           const { error: msgErr } = await admin.from("messages").insert([
             { session_id: sessionIdOut, role: "user", content: userContent },
             {
@@ -349,33 +384,33 @@ Current session context:
               content: responseText,
             },
           ]);
-          if (msgErr) console.error("messages insert", msgErr);
+          if (msgErr) {
+            console.error("assess history persist: messages insert failed", {
+              user_id: user.id,
+              session_id: sessionIdOut,
+              session_content: userContent,
+              claude_response: responseText,
+              error: msgErr,
+            });
+            historyWarning = true;
+          }
         }
-      } else {
-        sessionIdOut = sessionIdBody;
-        const { error: upErr } = await admin
-          .from("sessions")
-          .update({ urgency_level: urgency })
-          .eq("id", sessionIdBody)
-          .eq("user_id", user.id);
-        if (upErr) console.error("sessions update", upErr);
-
-        const { error: msgErr } = await admin.from("messages").insert([
-          { session_id: sessionIdOut, role: "user", content: userContent },
-          {
-            session_id: sessionIdOut,
-            role: "assistant",
-            content: responseText,
-          },
-        ]);
-        if (msgErr) console.error("messages insert", msgErr);
+      } catch (persistErr) {
+        console.error("assess history persist: unexpected error", {
+          user_id: user.id,
+          session_content: userContent,
+          claude_response: responseText,
+          error: persistErr,
+        });
+        historyWarning = true;
       }
     }
 
     return NextResponse.json({
       response: responseText,
-      usage: response.usage,
+      usage: anthropicUsage,
       session_id: sessionIdOut,
+      ...(historyWarning ? { historyWarning: true } : {}),
     });
   } catch (error) {
     console.error("OrixLink API error:", error);
