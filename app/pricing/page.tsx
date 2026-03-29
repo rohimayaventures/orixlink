@@ -67,7 +67,7 @@ export default function PricingPage() {
 
   async function handleCheckout(priceKey: string) {
     if (!user) {
-      router.push("/auth/signin?redirect=/pricing");
+      router.push("/auth/signup?redirect=/pricing");
       return;
     }
     const isOneTime = priceKey === "lifetime" || priceKey.startsWith("credits-");
@@ -186,7 +186,7 @@ export default function PricingPage() {
               <FeatureLine ok={false}>Offline PWA</FeatureLine>
             </ul>
             <Link
-              href="/auth/signup"
+              href="/auth/signup?redirect=/pricing"
               className="btn-ghost-gold w-full text-center py-3 rounded-lg font-medium"
               style={{ fontFamily: "var(--font-body), sans-serif" }}
             >

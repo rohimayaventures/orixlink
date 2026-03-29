@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
+import { usageCapFromSubscriptionRow } from "@/lib/admin/tierCaps";
+import { ensureUsageTrackingForMonth } from "@/lib/ensureUsageTracking";
 
 type Variant = "dark" | "light";
 
@@ -29,17 +31,11 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
     const supabase = createClient();
     const ym = new Date().toISOString().slice(0, 7);
     (async () => {
-      const [subRes, useRes, profRes] = await Promise.all([
+      const [subRes, profRes] = await Promise.all([
         supabase
           .from("subscriptions")
-          .select("tier")
+          .select("tier, is_lifetime, assessments_cap")
           .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("usage_tracking")
-          .select("assessments_used, assessments_cap")
-          .eq("user_id", user.id)
-          .eq("year_month", ym)
           .maybeSingle(),
         supabase
           .from("profiles")
@@ -48,8 +44,16 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
           .maybeSingle(),
       ]);
       const tier = (subRes.data?.tier as string) || "free";
-      const used = (useRes.data?.assessments_used as number) ?? 0;
-      const cap = (useRes.data?.assessments_cap as number) ?? 5;
+      const usageRow = await ensureUsageTrackingForMonth(
+        supabase,
+        user.id,
+        ym,
+        subRes.data
+      );
+      const used = usageRow?.assessments_used ?? 0;
+      const cap =
+        usageRow?.assessments_cap ??
+        usageCapFromSubscriptionRow(subRes.data);
       setUsage({ used, cap, tier });
       setIsAdmin(Boolean(profRes.data?.is_admin));
     })();

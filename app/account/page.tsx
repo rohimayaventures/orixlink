@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { usageCapFromSubscriptionRow } from "@/lib/admin/tierCaps";
+import { ensureUsageTrackingForMonth } from "@/lib/ensureUsageTracking";
 import AccountClient from "./AccountClient";
 
 export default async function AccountPage() {
@@ -11,17 +13,23 @@ export default async function AccountPage() {
 
   const yearMonth = new Date().toISOString().slice(0, 7);
 
-  const [profileRes, subRes, usageRes, creditsRes] = await Promise.all([
+  const [profileRes, subRes, creditsRes] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
     supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle(),
-    supabase
-      .from("usage_tracking")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("year_month", yearMonth)
-      .maybeSingle(),
     supabase.from("credits").select("credits_remaining").eq("user_id", user.id),
   ]);
+
+  const usageAligned =
+    (await ensureUsageTrackingForMonth(
+      supabase,
+      user.id,
+      yearMonth,
+      subRes.data
+    )) ?? {
+      assessments_used: 0,
+      assessments_cap: usageCapFromSubscriptionRow(subRes.data),
+      year_month: yearMonth,
+    };
 
   const creditSum = (creditsRes.data ?? []).reduce(
     (s, r) => s + (Number(r.credits_remaining) || 0),
@@ -33,7 +41,7 @@ export default async function AccountPage() {
       user={user}
       profile={profileRes.data}
       subscription={subRes.data}
-      usage={usageRes.data}
+      usage={usageAligned}
       creditSum={creditSum}
     />
   );

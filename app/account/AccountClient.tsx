@@ -13,12 +13,13 @@ type Props = {
     status: string;
     is_lifetime: boolean;
     stripe_customer_id: string | null;
+    current_period_end: string | null;
   } | null;
   usage: {
     assessments_used: number;
     assessments_cap: number;
     year_month: string;
-  } | null;
+  };
   creditSum: number;
 };
 
@@ -32,10 +33,19 @@ export default function AccountClient({
   const router = useRouter();
   const [portalLoading, setPortalLoading] = useState(false);
   const tier = subscription?.tier ?? "free";
-  const used = usage?.assessments_used ?? 0;
-  const cap = usage?.assessments_cap ?? 5;
-  const nextMonth = (() => {
-    const [y, m] = (usage?.year_month ?? "").split("-").map(Number);
+  const used = usage.assessments_used;
+  const cap = usage.assessments_cap;
+  const nextPeriodLabel = (() => {
+    if (subscription?.current_period_end) {
+      return new Date(subscription.current_period_end).toLocaleDateString(
+        "en-US",
+        { month: "long", day: "numeric", year: "numeric" }
+      );
+    }
+    if (subscription?.is_lifetime || subscription?.tier === "lifetime") {
+      return "Never -- lifetime access";
+    }
+    const [y, m] = (usage.year_month ?? "").split("-").map(Number);
     if (!y || !m) return "—";
     const d = new Date(y, m, 1);
     return d.toLocaleDateString("en-US", {
@@ -141,7 +151,7 @@ export default function AccountClient({
             {used} / {cap} used
           </p>
           <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
-            Next period starts {nextMonth}
+            Next period starts {nextPeriodLabel}
           </p>
         </div>
 

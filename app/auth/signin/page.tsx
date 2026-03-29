@@ -38,6 +38,19 @@ function AuthSignInInner() {
       >
         Back to home
       </Link>
+      <p
+        className="text-center text-sm mt-8"
+        style={{ color: "#6B6159", fontFamily: "var(--font-body), sans-serif" }}
+      >
+        Don&apos;t have an account?{" "}
+        <Link
+          href={`/auth/signup?redirect=${encodeURIComponent(redirect)}`}
+          className="underline font-medium"
+          style={{ color: "#C8A96E" }}
+        >
+          Sign up
+        </Link>
+      </p>
     </main>
   );
 }

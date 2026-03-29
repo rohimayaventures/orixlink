@@ -22,6 +22,7 @@ function AuthSignUpInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/assessment";
+  const signInHref = `/auth/signin?redirect=${encodeURIComponent(redirect)}`;
 
   const [tier, setTier] = useState<Tier>("free");
   const [billing, setBilling] = useState<"annual" | "monthly">("annual");
@@ -237,6 +238,12 @@ function AuthSignUpInner() {
           {" · "}
           <Link href="/" style={{ color: "var(--gold-muted)" }}>
             Back to home
+          </Link>
+        </p>
+        <p className="text-center text-sm mt-6" style={{ color: "var(--text-muted-dark)" }}>
+          Already have an account?{" "}
+          <Link href={signInHref} style={{ color: "var(--gold)" }}>
+            Sign in
           </Link>
         </p>
       </div>
