@@ -15,7 +15,36 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const VALID_ROLES = new Set(["patient", "family", "clinician"]);
+const ROLE_FRAMING: Record<string, string> = {
+  patient:
+    "The user is assessing their own symptoms. Use first-person framing. Address the user directly as \"you\".",
+
+  caregiver_child:
+    "The user is a parent or guardian assessing a child or teenager. Use caregiver-directed language -- address the parent not the child. Apply pediatric clinical framing: lower urgency thresholds for high fever in infants under 3 months, respiratory distress, unusual lethargy, refusal to eat, and dehydration. Flag febrile seizure risk for children under 5. Use \"your child\" throughout. For Tier 4 urgency say \"Take your child to the emergency department now\" not \"Go to the emergency department now\".",
+
+  caregiver_elderly:
+    "The user is assessing an elderly parent or family member. Apply geriatric clinical framing: consider fall risk, medication interaction likelihood, atypical symptom presentation in older adults such as confusion as the only sign of infection, and cognitive baseline changes. Lower the urgency threshold -- older adults deteriorate faster and present atypically. Use \"your family member\" or \"your parent\" throughout.",
+
+  caregiver_spouse:
+    "The user is assessing their spouse or partner. Use third-person framing directed at the caregiver. Use \"your partner\" or \"they\" throughout. Standard adult urgency thresholds apply unless age context suggests otherwise.",
+
+  caregiver_family_member:
+    "The user is assessing another adult family member. Use third-person clinical framing. Address the caregiver directly. Use \"the person you are helping\" or \"they\" throughout. Standard adult urgency thresholds apply.",
+
+  caregiver_other:
+    "The user is a caregiver assessing another adult. Use third-person clinical framing. Address the caregiver directly. Use \"the person you are helping\" or \"they\" throughout.",
+
+  clinician:
+    "The user is a medical professional -- nurse, PA, NP, or MD. Use clinical terminology appropriate for a trained clinician. Include differential reasoning with clinical language. Use medical shorthand and assume familiarity with anatomy, physiology, and standard diagnostic reasoning. Do not simplify clinical language. Present the differential with likelihood reasoning a clinician would use at bedside.",
+};
+
+function intakeRoleToDbRole(intake: string): "patient" | "family" | "clinician" {
+  const t = intake.trim();
+  if (t === "clinician") return "clinician";
+  if (t === "patient") return "patient";
+  if (t.startsWith("caregiver_")) return "family";
+  return "patient";
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -182,6 +211,7 @@ export async function POST(request: NextRequest) {
       language,
       session_id: sessionIdBody,
       dependent_id: dependentIdBody,
+      family_member_target_id: familyMemberTargetBody,
     } = body as {
       messages?: { role: string; content: string }[];
       role?: string;
@@ -189,6 +219,7 @@ export async function POST(request: NextRequest) {
       language?: string;
       session_id?: string | null;
       dependent_id?: string | null;
+      family_member_target_id?: string | null;
     };
 
     const langCode = resolveLanguageCode(
@@ -211,6 +242,7 @@ export async function POST(request: NextRequest) {
     const yearMonth = new Date().toISOString().slice(0, 7);
     let admin: AdminClient | null = null;
     let resolvedDependentId: string | null = null;
+    let resolvedFamilyMemberTargetId: string | null = null;
 
     if (user) {
       try {
@@ -276,6 +308,70 @@ export async function POST(request: NextRequest) {
           );
         }
         resolvedDependentId = depId;
+      }
+
+      if (
+        familyMemberTargetBody &&
+        typeof familyMemberTargetBody === "string" &&
+        familyMemberTargetBody.trim() !== ""
+      ) {
+        if (roleTrim !== "caregiver_family_member") {
+          return NextResponse.json(
+            {
+              error:
+                "family_member_target_id is only valid for the family-member caregiver role",
+            },
+            { status: 400 }
+          );
+        }
+        const tid = familyMemberTargetBody.trim();
+        if (!UUID_RE.test(tid)) {
+          return NextResponse.json(
+            { error: "Invalid family_member_target_id" },
+            { status: 400 }
+          );
+        }
+        const subStFam = (sub?.status ?? "").toLowerCase();
+        if (
+          sub?.tier !== "family" ||
+          (subStFam !== "active" && subStFam !== "trialing")
+        ) {
+          return NextResponse.json(
+            { error: "Family plan required to select a family member" },
+            { status: 403 }
+          );
+        }
+        const { data: asMemberRow } = await admin
+          .from("family_members")
+          .select("owner_user_id")
+          .eq("member_user_id", user.id)
+          .eq("status", "active")
+          .limit(1)
+          .maybeSingle();
+        const isInvitedMember =
+          !!asMemberRow &&
+          typeof asMemberRow.owner_user_id === "string" &&
+          asMemberRow.owner_user_id !== user.id;
+        if (isInvitedMember) {
+          return NextResponse.json(
+            { error: "Only the family plan owner can select household members" },
+            { status: 403 }
+          );
+        }
+        const { data: linkRow } = await admin
+          .from("family_members")
+          .select("id")
+          .eq("owner_user_id", user.id)
+          .eq("member_user_id", tid)
+          .eq("status", "active")
+          .maybeSingle();
+        if (!linkRow) {
+          return NextResponse.json(
+            { error: "Family member not found or not active on your plan" },
+            { status: 400 }
+          );
+        }
+        resolvedFamilyMemberTargetId = tid;
       }
 
       const { data: currentUsage } = await admin
@@ -446,13 +542,68 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const systemWithContext = `${SYSTEM_PROMPT}
+    let dependentContext = "";
+    let familyMemberContextLine = "";
 
-Current session context:
-- Role: ${role || "unknown"}
-- Situation: ${context || "not specified"}
-- Response language (prose): ${responseLanguageName} (code: ${langCode})
-- Critical instruction: Evaluate all red flags present in the message and assign the highest clinically justified urgency level. Do not default to a lower level. If compartment syndrome is on the differential and multiple red flags are present, assign EMERGENCY_DEPARTMENT_NOW. If neurological signs are present in any post-procedure patient, assign EMERGENCY_DEPARTMENT_NOW.`;
+    if (user && admin) {
+      if (resolvedDependentId) {
+        const { data: dep } = await admin
+          .from("dependents")
+          .select("display_name, age_range, relevant_conditions")
+          .eq("id", resolvedDependentId)
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+        if (dep) {
+          dependentContext =
+            "\nDependent profile: " +
+            String(dep.display_name) +
+            (dep.age_range ? `, age range: ${dep.age_range}` : "") +
+            (dep.relevant_conditions
+              ? `. Known conditions: ${dep.relevant_conditions}. Factor into differential and urgency.`
+              : "");
+        }
+      }
+      if (resolvedFamilyMemberTargetId) {
+        let fmLabel = "Selected family member";
+        const { data: profFm } = await admin
+          .from("profiles")
+          .select("full_name")
+          .eq("id", resolvedFamilyMemberTargetId)
+          .maybeSingle();
+        if (profFm?.full_name?.trim()) {
+          fmLabel = profFm.full_name.trim();
+        }
+        try {
+          const { data: authFm } = await admin.auth.admin.getUserById(
+            resolvedFamilyMemberTargetId
+          );
+          if (authFm?.user?.email && !profFm?.full_name?.trim()) {
+            fmLabel = authFm.user.email;
+          }
+        } catch {
+          /* noop */
+        }
+        familyMemberContextLine = `\nAssessed family member: ${fmLabel}.`;
+      }
+    }
+
+    const intakeRoleKey =
+      typeof role === "string" && role.trim() !== "" ? role.trim() : "patient";
+    const roleFraming =
+      ROLE_FRAMING[intakeRoleKey] ??
+      "The user is assessing symptoms. Use clear plain-language framing.";
+
+    const systemWithContext =
+      SYSTEM_PROMPT +
+      "\n\n--- Current session context ---\n" +
+      `Clinical framing: ${roleFraming}` +
+      dependentContext +
+      familyMemberContextLine +
+      `\nSituation: ${context || "not specified"}` +
+      `\nLanguage: ${language || "English"}` +
+      "\n- Response language (prose): " +
+      `${responseLanguageName} (code: ${langCode})` +
+      "\n- Critical instruction: Evaluate all red flags present in the message and assign the highest clinically justified urgency level. Do not default to a lower level. If compartment syndrome is on the differential and multiple red flags are present, assign EMERGENCY_DEPARTMENT_NOW. If neurological signs are present in any post-procedure patient, assign EMERGENCY_DEPARTMENT_NOW.";
 
     const anthropicMessages: MessageParam[] = messages.map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
@@ -498,13 +649,8 @@ Current session context:
     if (user && admin) {
       const urgency = parseUrgencyFromAssessmentText(responseText);
       const roleRaw =
-        typeof role === "string" && role.trim() !== "" ? role.trim() : "self";
-      const roleDb =
-        roleRaw === "self" || roleRaw === "patient"
-          ? "patient"
-          : VALID_ROLES.has(roleRaw)
-            ? roleRaw
-            : "patient";
+        typeof role === "string" && role.trim() !== "" ? role.trim() : "patient";
+      const roleDb = intakeRoleToDbRole(roleRaw);
       const langStored =
         typeof language === "string" && language.length > 0 ? language : "en";
 

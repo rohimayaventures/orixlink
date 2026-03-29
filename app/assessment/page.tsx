@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import HeaderAuth from '@/components/HeaderAuth'
@@ -32,11 +32,89 @@ import {
 } from '@/lib/outputLanguages'
 import type { DependentRow } from '@/lib/dependents'
 
-const ROLES = [
-  { id: 'clinician', label: 'Medical Professional', desc: 'Nurse, PA, NP, MD' },
-  { id: 'family', label: 'Family or Caregiver', desc: 'Helping someone else' },
-  { id: 'patient', label: 'Patient', desc: 'My own symptoms' },
+type IntakeRoleDef = {
+  id: string
+  label: string
+  description: string
+  tiers: string[]
+  showDependentPicker: boolean
+  showFamilyMemberPicker: boolean
+}
+
+const ALL_ROLES: IntakeRoleDef[] = [
+  {
+    id: 'patient',
+    label: 'Myself',
+    description: 'My own symptoms',
+    tiers: ['anonymous', 'free', 'pro', 'family', 'lifetime'],
+    showDependentPicker: false,
+    showFamilyMemberPicker: false,
+  },
+  {
+    id: 'caregiver_child',
+    label: 'My child or teen',
+    description: 'Under 18, I am their guardian',
+    tiers: ['pro', 'family', 'lifetime'],
+    showDependentPicker: true,
+    showFamilyMemberPicker: false,
+  },
+  {
+    id: 'caregiver_elderly',
+    label: 'A parent or elderly family member',
+    description: 'Age-related risk factors apply',
+    tiers: ['pro', 'family', 'lifetime'],
+    showDependentPicker: true,
+    showFamilyMemberPicker: false,
+  },
+  {
+    id: 'caregiver_spouse',
+    label: 'My spouse or partner',
+    description: 'Assessing someone close to me',
+    tiers: ['pro', 'family', 'lifetime'],
+    showDependentPicker: true,
+    showFamilyMemberPicker: false,
+  },
+  {
+    id: 'caregiver_family_member',
+    label: 'A family member',
+    description: 'Another adult on my family plan',
+    tiers: ['family'],
+    showDependentPicker: false,
+    showFamilyMemberPicker: true,
+  },
+  {
+    id: 'caregiver_other',
+    label: 'Someone else',
+    description: 'Helping another adult',
+    tiers: ['anonymous', 'free', 'pro', 'family', 'lifetime'],
+    showDependentPicker: false,
+    showFamilyMemberPicker: false,
+  },
+  {
+    id: 'clinician',
+    label: 'Medical Professional',
+    description: 'Nurse, PA, NP, MD',
+    tiers: ['free', 'pro', 'family', 'lifetime'],
+    showDependentPicker: false,
+    showFamilyMemberPicker: false,
+  },
 ]
+
+function tierForRoleFilter(
+  subscriptionTier: string | undefined,
+  user: unknown
+): string {
+  if (!user) return 'anonymous'
+  const t = (subscriptionTier || 'free').toLowerCase()
+  if (t === 'lifetime') return 'lifetime'
+  if (t === 'clinical') return 'pro'
+  return t
+}
+
+function roleTierVisible(role: IntakeRoleDef, userTier: string): boolean {
+  if (userTier === 'clinical' && role.tiers.includes('pro')) return true
+  return role.tiers.includes(userTier)
+}
 
 const CONTEXTS = [
   { id: 'recent_procedure', label: 'Recent procedure', sub: 'Post-surgery or hospitalization' },
@@ -84,10 +162,40 @@ export default function AssessmentPage() {
   const [draftHydrated, setDraftHydrated] = useState(false)
   const [intakeDependents, setIntakeDependents] = useState<DependentRow[]>([])
   const [selectedDependentId, setSelectedDependentId] = useState('')
+  const [quickAddName, setQuickAddName] = useState('')
+  const [quickAddAge, setQuickAddAge] = useState('')
+  const [familyMemberTargetId, setFamilyMemberTargetId] = useState('')
+  const [familyMembersOptions, setFamilyMembersOptions] = useState<
+    { userId: string; label: string }[]
+  >([])
+  const [isFamilyPlanOwner, setIsFamilyPlanOwner] = useState(false)
 
-  const tierLower = (subscriptionTier || 'free').toLowerCase()
-  const canPickDependentTier =
-    tierLower === 'pro' || tierLower === 'family'
+  const userTier = tierForRoleFilter(subscriptionTier, user)
+  const visibleRoles = useMemo(() => {
+    return ALL_ROLES.filter((r) => {
+      if (r.id === 'caregiver_family_member') {
+        return userTier === 'family' && isFamilyPlanOwner
+      }
+      return roleTierVisible(r, userTier)
+    })
+  }, [userTier, isFamilyPlanOwner])
+
+  const selectedRoleDef = ALL_ROLES.find((r) => r.id === role)
+  const showDependentSubselector =
+    Boolean(
+      user &&
+        selectedRoleDef?.showDependentPicker &&
+        (userTier === 'pro' ||
+          userTier === 'family' ||
+          userTier === 'lifetime')
+    )
+  const showFamilySubselector =
+    Boolean(
+      user &&
+        role === 'caregiver_family_member' &&
+        userTier === 'family' &&
+        isFamilyPlanOwner
+    )
 
   useEffect(() => {
     sessionStorage.removeItem('orixlink_session_id')
@@ -112,6 +220,9 @@ export default function AssessmentPage() {
         if (typeof d.medications === 'string') setMedications(d.medications)
         if (typeof d.language === 'string') setLanguage(d.language)
         if (typeof d.dependent_id === 'string') setSelectedDependentId(d.dependent_id)
+        if (typeof d.family_member_target_id === 'string') {
+          setFamilyMemberTargetId(d.family_member_target_id)
+        }
       }
     } catch {
       /* ignore corrupt draft */
@@ -120,8 +231,37 @@ export default function AssessmentPage() {
   }, [])
 
   useEffect(() => {
-    if (!user || !canPickDependentTier) {
-      setIntakeDependents([])
+    if (!user) {
+      setIsFamilyPlanOwner(false)
+      setFamilyMembersOptions([])
+      return
+    }
+    let cancelled = false
+    void fetch('/api/family/members')
+      .then((r) => r.json())
+      .then(
+        (d: {
+          isOwner?: boolean
+          members?: { userId: string; label: string }[]
+        }) => {
+          if (cancelled) return
+          setIsFamilyPlanOwner(!!d.isOwner)
+          setFamilyMembersOptions(Array.isArray(d.members) ? d.members : [])
+        }
+      )
+      .catch(() => {
+        if (!cancelled) {
+          setIsFamilyPlanOwner(false)
+          setFamilyMembersOptions([])
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (!showDependentSubselector) {
       return
     }
     let cancelled = false
@@ -137,7 +277,7 @@ export default function AssessmentPage() {
     return () => {
       cancelled = true
     }
-  }, [user, canPickDependentTier])
+  }, [showDependentSubselector, role])
 
   useEffect(() => {
     if (!draftHydrated) return
@@ -156,6 +296,7 @@ export default function AssessmentPage() {
           medications,
           language,
           dependent_id: selectedDependentId,
+          family_member_target_id: familyMemberTargetId,
         })
       )
     } catch {
@@ -173,6 +314,7 @@ export default function AssessmentPage() {
     medications,
     language,
     selectedDependentId,
+    familyMemberTargetId,
     draftHydrated,
   ])
 
@@ -196,7 +338,32 @@ export default function AssessmentPage() {
     setMedications('')
     setLanguage(DEFAULT_LANGUAGE_CODE)
     setSelectedDependentId('')
+    setQuickAddName('')
+    setQuickAddAge('')
+    setFamilyMemberTargetId('')
     clearAssessmentDraft()
+  }
+
+  async function handleQuickAddDependent() {
+    if (!quickAddName.trim()) return
+    const res = await fetch('/api/dependents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        display_name: quickAddName.trim(),
+        age_range: quickAddAge || null,
+        relevant_conditions: null,
+      }),
+    })
+    if (res.ok) {
+      const newDep = (await res.json()) as DependentRow
+      if (newDep?.id) {
+        setIntakeDependents((prev) => [...prev, newDep])
+        setSelectedDependentId(newDep.id)
+        setQuickAddName('')
+        setQuickAddAge('')
+      }
+    }
   }
 
   const canProceedStep1 = role !== ''
@@ -236,8 +403,16 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
         },
         body: JSON.stringify({
           messages: [{ role: 'user', content: userMessage }],
-          role, context, language,
+          role,
+          context,
+          language,
           ...(sessionId ? { session_id: sessionId } : {}),
+          ...(selectedDependentId.trim()
+            ? { dependent_id: selectedDependentId.trim() }
+            : {}),
+          ...(familyMemberTargetId.trim()
+            ? { family_member_target_id: familyMemberTargetId.trim() }
+            : {}),
         }),
       })
       const data = await res.json()
@@ -479,12 +654,20 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: '1.5rem' }}>
-                {ROLES.map((r) => (
+                {visibleRoles.map((r) => (
                   <button
                     key={r.id}
+                    type="button"
                     onClick={() => {
                       setRole(r.id)
-                      if (r.id === 'patient') setSelectedDependentId('')
+                      if (!r.showDependentPicker) {
+                        setSelectedDependentId('')
+                        setQuickAddName('')
+                        setQuickAddAge('')
+                      }
+                      if (!r.showFamilyMemberPicker) {
+                        setFamilyMemberTargetId('')
+                      }
                     }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 16,
@@ -505,7 +688,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     </div>
                     <div>
                       <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#F4EFE6', marginBottom: 2 }}>{r.label}</div>
-                      <div style={{ fontSize: '0.8125rem', color: 'rgba(244,239,230,0.5)', fontWeight: 300 }}>{r.desc}</div>
+                      <div style={{ fontSize: '0.8125rem', color: 'rgba(244,239,230,0.5)', fontWeight: 300 }}>{r.description}</div>
                     </div>
                     {role === r.id && (
                       <div style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%', background: GOLD, flexShrink: 0 }} />
@@ -514,38 +697,177 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 ))}
               </div>
 
-              {role !== '' &&
-                role !== 'patient' &&
-                user &&
-                intakeDependents.length > 0 &&
-                canPickDependentTier && (
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label
-                      htmlFor="orixlink-assess-dependent"
-                      style={labelStyle}
+              {showDependentSubselector && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  {intakeDependents.length > 0 ? (
+                    <>
+                      <label
+                        htmlFor="orixlink-assess-dependent"
+                        style={labelStyle}
+                      >
+                        Who are you assessing?
+                      </label>
+                      <select
+                        id="orixlink-assess-dependent"
+                        value={selectedDependentId}
+                        onChange={(e) => setSelectedDependentId(e.target.value)}
+                        style={{
+                          ...inputStyle,
+                          cursor: 'pointer',
+                          appearance: 'auto',
+                          WebkitAppearance: 'menulist',
+                        }}
+                      >
+                        <option value="">No profile — continue without one</option>
+                        {intakeDependents.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.age_range
+                              ? `${d.display_name} (${d.age_range})`
+                              : d.display_name}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  ) : (
+                    <div style={{
+                      background: 'rgba(200,169,110,0.06)',
+                      border: '1px solid rgba(200,169,110,0.2)',
+                      borderRadius: '10px',
+                      padding: '16px',
+                      marginTop: '12px',
+                    }}
                     >
-                      Who are you assessing?
-                    </label>
-                    <select
-                      id="orixlink-assess-dependent"
-                      value={selectedDependentId}
-                      onChange={(e) => setSelectedDependentId(e.target.value)}
-                      style={{
-                        ...inputStyle,
-                        cursor: 'pointer',
-                        appearance: 'auto',
-                        WebkitAppearance: 'menulist',
+                      <p style={{
+                        fontSize: '13px',
+                        color: 'rgba(244,239,230,0.6)',
+                        margin: '0 0 12px',
                       }}
-                    >
-                      <option value="">Someone else (no profile)</option>
-                      {intakeDependents.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.display_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                      >
+                        Add a quick profile for more accurate
+                        results. Takes 10 seconds.
+                      </p>
+
+                      <input
+                        placeholder="Name (e.g. Ella, Dad)"
+                        style={{
+                          width: '100%',
+                          background: '#141824',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          color: '#F4EFE6',
+                          fontSize: '13px',
+                          marginBottom: '8px',
+                          boxSizing: 'border-box',
+                        }}
+                        value={quickAddName}
+                        onChange={(e) => setQuickAddName(e.target.value)}
+                      />
+
+                      <select
+                        style={{
+                          width: '100%',
+                          background: '#141824',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          color: quickAddAge
+                            ? '#F4EFE6'
+                            : 'rgba(244,239,230,0.4)',
+                          fontSize: '13px',
+                          marginBottom: '12px',
+                        }}
+                        value={quickAddAge}
+                        onChange={(e) => setQuickAddAge(e.target.value)}
+                      >
+                        <option value="">Age range (optional)</option>
+                        <option value="Under 2">Under 2</option>
+                        <option value="2-5">2 to 5</option>
+                        <option value="6-12">6 to 12</option>
+                        <option value="13-17">13 to 17</option>
+                        <option value="18-64">18 to 64</option>
+                        <option value="65-74">65 to 74</option>
+                        <option value="75+">75 and older</option>
+                      </select>
+
+                      <div style={{
+                        display: 'flex',
+                        gap: '10px',
+                        alignItems: 'center',
+                      }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void handleQuickAddDependent()}
+                          disabled={!quickAddName.trim()}
+                          style={{
+                            background: quickAddName.trim()
+                              ? '#C8A96E' : 'rgba(200,169,110,0.25)',
+                            color: quickAddName.trim()
+                              ? '#080C14' : 'rgba(8,12,20,0.5)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '8px 16px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: quickAddName.trim()
+                              ? 'pointer' : 'not-allowed',
+                          }}
+                        >
+                          Save and select
+                        </button>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          style={{
+                            fontSize: '12px',
+                            color: 'rgba(244,239,230,0.3)',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setSelectedDependentId('')}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelectedDependentId('')
+                            }
+                          }}
+                        >
+                          Continue without a profile
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {showFamilySubselector && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label
+                    htmlFor="orixlink-family-member-target"
+                    style={labelStyle}
+                  >
+                    Which family member?
+                  </label>
+                  <select
+                    id="orixlink-family-member-target"
+                    value={familyMemberTargetId}
+                    onChange={(e) => setFamilyMemberTargetId(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      cursor: 'pointer',
+                      appearance: 'auto',
+                      WebkitAppearance: 'menulist',
+                    }}
+                  >
+                    <option value="">Continue without selecting</option>
+                    {familyMembersOptions.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div style={{ marginBottom: '1.5rem' }}>
                 <label htmlFor="orixlink-output-language" style={labelStyle}>
@@ -593,11 +915,24 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={!canProceedStep1}
-                className="orix-btn-gold"
                 style={{
-                  width: '100%', opacity: canProceedStep1 ? 1 : 0.4, cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
-                  padding: '14px 20px', borderRadius: 8,
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  width: '100%',
+                  padding: '14px 20px',
+                  borderRadius: 8,
+                  border: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  fontWeight: canProceedStep1 ? 600 : undefined,
+                  background: canProceedStep1
+                    ? '#C8A96E'
+                    : 'rgba(200,169,110,0.25)',
+                  color: canProceedStep1
+                    ? '#080C14'
+                    : 'rgba(8,12,20,0.5)',
+                  cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.2s ease, color 0.2s ease',
                 }}
               >
                 Continue <ArrowRightIcon style={{ width: 16, height: 16 }} />

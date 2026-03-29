@@ -29,6 +29,7 @@ function AuthSignUpInner() {
   const [billing, setBilling] = useState<"annual" | "monthly">("annual");
   const [phase, setPhase] = useState<Phase>("idle");
   const [checkoutError, setCheckoutError] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const checkoutStarted = useRef(false);
   const familyJoinHandled = useRef(false);
 
@@ -279,13 +280,57 @@ function AuthSignUpInner() {
           })}
         </div>
 
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "10px",
+            cursor: "pointer",
+            margin: "0 auto 16px",
+            maxWidth: "480px",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={ageConfirmed}
+            onChange={(e) => setAgeConfirmed(e.target.checked)}
+            style={{ marginTop: "3px", flexShrink: 0 }}
+          />
+          <span
+            style={{
+              fontSize: "12px",
+              color: "rgba(244,239,230,0.5)",
+              lineHeight: "1.6",
+            }}
+          >
+            I confirm I am 18 years of age or older.
+            OrixLink AI is for adults only. To assess
+            a child, create an account and add them
+            as a dependent profile.
+          </span>
+        </label>
+
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
           <button
             type="button"
             onClick={handleCreateAccount}
-            disabled={loading}
-            className="btn-gold px-10 py-3.5 rounded-lg font-semibold disabled:opacity-50 w-full sm:w-auto min-w-[240px]"
-            style={{ color: "var(--obsidian)" }}
+            disabled={!ageConfirmed || loading || phase === "checkout"}
+            className="px-10 py-3.5 rounded-lg w-full sm:w-auto min-w-[240px]"
+            style={{
+              border: "none",
+              fontWeight: ageConfirmed ? 600 : undefined,
+              background: ageConfirmed
+                ? "#C8A96E"
+                : "rgba(200,169,110,0.25)",
+              color: ageConfirmed ? "#080C14" : "rgba(8,12,20,0.5)",
+              cursor:
+                !ageConfirmed || loading || phase === "checkout"
+                  ? "not-allowed"
+                  : "pointer",
+              opacity:
+                ageConfirmed && (loading || phase === "checkout") ? 0.65 : 1,
+              transition: "background 0.2s ease, color 0.2s ease",
+            }}
           >
             {phase === "checkout" ? "Redirecting to checkout…" : "Create account & continue"}
           </button>
