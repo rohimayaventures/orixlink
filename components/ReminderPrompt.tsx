@@ -21,11 +21,59 @@ export function ReminderPrompt({
   const [selected, setSelected] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [confirmedSendAt, setConfirmedSendAt] = useState<Date | null>(null);
+  const [reminderId, setReminderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const router = useRouter();
 
   const isPaid = ["pro", "family", "lifetime"].includes(userTier);
+
+  async function handleCancel() {
+    if (!reminderId) return;
+    try {
+      await fetch("/api/reminders/set", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reminderId }),
+      });
+      setConfirmed(false);
+      setSelected(null);
+      setReminderId(null);
+    } catch (error) {
+      console.error("Failed to cancel reminder:", error);
+    }
+  }
+
+  async function handleSet(hours: number) {
+    setSelected(hours);
+    setLoading(true);
+    try {
+      const response = await fetch("/api/reminders/set", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          hoursDelay: hours,
+          chiefComplaint,
+          urgencyTier,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && data.sendAt) {
+        setReminderId(data.reminderId ?? null);
+        setConfirmedSendAt(new Date(data.sendAt));
+        setConfirmed(true);
+      }
+    } catch (error) {
+      console.error("Failed to set reminder:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   if (dismissed) return null;
 
@@ -67,15 +115,11 @@ export function ReminderPrompt({
         <button
           type="button"
           onClick={() => router.push("/pricing")}
+          className="orix-btn-outline"
           style={{
-            background: "transparent",
-            border: "1px solid rgba(200,169,110,0.4)",
-            borderRadius: "8px",
             padding: "8px 20px",
-            color: "#C8A96E",
             fontFamily: "DM Sans, sans-serif",
             fontSize: "13px",
-            cursor: "pointer",
           }}
         >
           Upgrade to Pro
@@ -111,36 +155,26 @@ export function ReminderPrompt({
           })}{" "}
           ({selected} hours from when you scheduled it).
         </p>
+        {reminderId ? (
+          <button
+            type="button"
+            onClick={handleCancel}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "rgba(244,239,230,0.45)",
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: "12px",
+              cursor: "pointer",
+              padding: "8px 0 0 0",
+              textDecoration: "underline",
+            }}
+          >
+            Cancel reminder
+          </button>
+        ) : null}
       </div>
     );
-  }
-
-  async function handleSet(hours: number) {
-    setSelected(hours);
-    setLoading(true);
-    try {
-      const response = await fetch("/api/reminders/set", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId,
-          hoursDelay: hours,
-          chiefComplaint,
-          urgencyTier,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.sendAt) {
-        setConfirmedSendAt(new Date(data.sendAt));
-        setConfirmed(true);
-      }
-    } catch (error) {
-      console.error("Failed to set reminder:", error);
-    } finally {
-      setLoading(false);
-    }
   }
 
   return (
@@ -192,7 +226,7 @@ export function ReminderPrompt({
           style={{
             background: "transparent",
             border: "none",
-            color: "rgba(244,239,230,0.3)",
+            color: "rgba(244,239,230,0.45)",
             fontSize: "18px",
             cursor: "pointer",
             padding: "0 0 0 16px",

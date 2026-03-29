@@ -51,7 +51,7 @@ export default function LegalOverlay() {
             fontWeight: 600,
             textTransform: "uppercase",
             letterSpacing: "0.1em",
-            color: "rgba(244,239,230,0.4)",
+            color: "rgba(244,239,230,0.65)",
             marginBottom: "0.75rem",
           }}
         >
@@ -124,15 +124,10 @@ export default function LegalOverlay() {
           <button
             type="button"
             onClick={handleAccept}
+            className="orix-btn-gold"
             style={{
-              backgroundColor: "#C8A96E",
-              color: "#080C14",
-              border: "none",
-              borderRadius: "8px",
               padding: "0.875rem 1.5rem",
               fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
               width: "100%",
               fontFamily: "DM Sans, sans-serif",
             }}
@@ -143,7 +138,7 @@ export default function LegalOverlay() {
           <p
             style={{
               fontSize: "12px",
-              color: "rgba(244,239,230,0.4)",
+              color: "rgba(244,239,230,0.65)",
               textAlign: "center",
               margin: 0,
             }}
@@ -151,7 +146,7 @@ export default function LegalOverlay() {
             By continuing, you agree to our{" "}
             <a
               href="/legal"
-              style={{ color: "rgba(244,239,230,0.4)", textDecoration: "underline" }}
+              style={{ color: "rgba(244,239,230,0.65)", textDecoration: "underline" }}
             >
               Terms of Use and Privacy Policy
             </a>

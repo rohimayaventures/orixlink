@@ -8,6 +8,9 @@ export type CapReachedPayload = {
   assessments_cap: number;
   reset_date: string;
   credits_remaining?: number;
+  cap_reached?: boolean;
+  message?: string;
+  upgrade_prompt?: boolean;
 };
 
 type Props = {
@@ -39,6 +42,12 @@ export default function CapReachedPrompt({
     : cap === 5
       ? "Upgrade to Pro"
       : "Upgrade now";
+
+  const detailCopy = isAnonymous
+    ? "Create a free account for 5 assessments per month -- no credit card required."
+    : resetDate
+      ? `Resets on ${resetDate}`
+      : "Resets at the start of next month.";
 
   return (
     <div
@@ -72,9 +81,7 @@ export default function CapReachedPrompt({
           fontFamily: "var(--font-body), sans-serif",
         }}
       >
-        {resetDate
-          ? `Resets on ${resetDate}`
-          : "Resets at the start of next month."}
+        {detailCopy}
       </p>
       <div
         style={{
@@ -98,25 +105,27 @@ export default function CapReachedPrompt({
         >
           {primaryLabel}
         </Link>
-        <Link
-          href="/auth/signin"
-          className="btn-ghost-gold"
-          style={{
-            display: "inline-block",
-            textAlign: "center",
-            minWidth: 200,
-            padding: "10px 18px",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            fontFamily: "var(--font-body), sans-serif",
-            borderWidth: "1.5px",
-            borderColor: GOLD,
-            color: "#F4EFE6",
-            textDecoration: "none",
-          }}
-        >
-          Sign in to a different account
-        </Link>
+        {!isAnonymous && (
+          <Link
+            href="/auth/signin"
+            className="btn-ghost-gold"
+            style={{
+              display: "inline-block",
+              textAlign: "center",
+              minWidth: 200,
+              padding: "10px 18px",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              fontFamily: "var(--font-body), sans-serif",
+              borderWidth: "1.5px",
+              borderColor: GOLD,
+              color: "#F4EFE6",
+              textDecoration: "none",
+            }}
+          >
+            Sign in to a different account
+          </Link>
+        )}
         {onDismiss && (
           <button
             type="button"

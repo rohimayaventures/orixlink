@@ -27,13 +27,13 @@ export async function POST() {
       .from("usage_tracking")
       .select("id")
       .eq("user_id", user.id)
-      .eq("year_month", yearMonth)
+      .eq("period_month", yearMonth)
       .maybeSingle();
 
     if (!existing) {
       await supabase.from("usage_tracking").insert({
         user_id: user.id,
-        year_month: yearMonth,
+        period_month: yearMonth,
         assessments_used: 0,
         assessments_cap: 5,
       });

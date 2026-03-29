@@ -1,5 +1,11 @@
+-- Requires: pg_cron and pg_net extensions
+-- Run in Supabase SQL editor before applying:
+--   CREATE EXTENSION IF NOT EXISTS pg_cron;
+--   CREATE EXTENSION IF NOT EXISTS pg_net;
+-- pg_cron job must be created manually in
+--   Supabase SQL editor after this migration runs.
+
 -- Follow-up reminders (optional email check-ins after assessment)
--- After applying: run pg_cron + pg_net extensions and cron job in Supabase SQL editor (see product docs).
 
 CREATE TABLE IF NOT EXISTS public.reminders (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 
-const GOLD = "#C8A96E";
 const TEXT = "#F4EFE6";
 const MUTED = "rgba(244,239,230,0.5)";
 
@@ -79,7 +78,7 @@ export default async function HistoryPage() {
         {!sessions?.length ? (
           <p style={{ color: MUTED }}>
             No saved sessions yet.{" "}
-            <Link href="/assessment" style={{ color: GOLD }}>
+            <Link href="/assessment" className="orix-link" style={{ textDecoration: "underline" }}>
               Run an assessment
             </Link>
           </p>
@@ -94,6 +93,7 @@ export default async function HistoryPage() {
               return (
                 <li
                   key={s.id as string}
+                  className="orix-clickable-row"
                   style={{
                     padding: "1rem 1.25rem",
                     marginBottom: 10,
@@ -135,14 +135,12 @@ export default async function HistoryPage() {
                   </div>
                   <Link
                     href={`/assessment/${s.id}`}
+                    className="orix-btn-outline"
                     style={{
                       fontSize: "0.875rem",
-                      fontWeight: 600,
-                      color: GOLD,
                       fontFamily: "DM Sans, sans-serif",
                       textDecoration: "none",
                       padding: "8px 16px",
-                      border: "1px solid rgba(200,169,110,0.4)",
                       borderRadius: 8,
                     }}
                   >
@@ -153,11 +151,25 @@ export default async function HistoryPage() {
             })}
           </ul>
         )}
+        {sessions && sessions.length > 0 ? (
+          <p
+            style={{
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: 11,
+              color: "rgba(244,239,230,0.45)",
+              marginTop: 16,
+              marginBottom: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            AI-generated assessment. Not medical advice.
+          </p>
+        ) : null}
         <p
           style={{
             fontFamily: "DM Sans, sans-serif",
             fontSize: 12,
-            color: "rgba(244,239,230,0.3)",
+            color: "rgba(244,239,230,0.45)",
             marginTop: sessions?.length ? 20 : 16,
             marginBottom: 0,
             lineHeight: 1.6,
@@ -166,7 +178,8 @@ export default async function HistoryPage() {
           To export your full assessment history, email{" "}
           <a
             href="mailto:support@rohimaya.ai?subject=Data%20export%20request"
-            style={{ color: "#C8A96E", textDecoration: "underline" }}
+            className="orix-link"
+            style={{ textDecoration: "underline" }}
           >
             support@rohimaya.ai
           </a>{" "}

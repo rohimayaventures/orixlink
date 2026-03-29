@@ -1,3 +1,8 @@
+-- Requires: 002_auth_billing.sql (usage_tracking)
+-- Requires: 004_admin_schema.sql (credits table)
+-- Requires: 007_fix_period_month_column.sql
+--   (period_month column rename)
+
 create or replace function attempt_assessment(
   p_user_id uuid,
   p_cap integer

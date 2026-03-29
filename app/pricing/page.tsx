@@ -374,7 +374,7 @@ export default function PricingPage() {
             className="mt-8 pt-6 border-t font-mono text-xs md:text-sm"
             style={{ borderColor: "rgba(200,169,110,0.25)", color: "rgba(240,237,232,0.65)" }}
           >
-            Retirement timer: 89 days remaining — Break-even vs Pro annual: 13 months
+            Launch offer -- available for a limited time. Break-even vs Pro annual: 13 months.
           </p>
         </section>
 

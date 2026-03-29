@@ -8,6 +8,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const userId = body.userId as string | undefined;
   const amount = Number(body.amount);
+  const packName =
+    typeof body.packName === "string" && body.packName.trim() !== ""
+      ? body.packName.trim()
+      : "admin_grant";
 
   if (!userId || !Number.isFinite(amount) || amount < 1 || amount > 1_000_000) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -16,13 +20,20 @@ export async function POST(request: Request) {
   const n = Math.floor(amount);
   const { admin } = gate.ctx;
 
+  const purchasedAt = new Date().toISOString();
+  const expiresAt = new Date(
+    Date.now() + 365 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
   const { error: insErr } = await admin.from("credits").insert({
     user_id: userId,
     credits_purchased: n,
     credits_remaining: n,
-    pack_name: "admin_grant",
-    purchased_at: new Date().toISOString(),
-    frozen: false,
+    pack_name: packName,
+    purchased_at: purchasedAt,
+    expires_at: expiresAt,
+    frozen_at: null,
+    stripe_payment_intent_id: null,
   });
 
   if (insErr) {

@@ -89,6 +89,32 @@ function nextPeriodStartDate(yearMonth: string): string {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+async function rollbackCreditForRow(
+  admin: AdminClient,
+  creditRowId: string
+) {
+  const { data: row, error: selErr } = await admin
+    .from("credits")
+    .select("credits_remaining")
+    .eq("id", creditRowId)
+    .maybeSingle();
+
+  if (selErr) {
+    console.error("rollbackCreditForRow select", selErr);
+    return;
+  }
+  if (!row) return;
+
+  const { error: upErr } = await admin
+    .from("credits")
+    .update({
+      credits_remaining: Number(row.credits_remaining) + 1,
+    })
+    .eq("id", creditRowId);
+
+  if (upErr) console.error("rollbackCreditForRow update", upErr);
+}
+
 function resolveUserCapForAttempt(
   sub: { tier?: string | null; assessments_cap?: number | null } | null
 ): number {
@@ -130,6 +156,8 @@ export async function POST(request: NextRequest) {
   let consumedAttempt = false;
   let rollbackUserId: string | null = null;
   let adminForRollback: AdminClient | null = null;
+  let wasOverCapBeforeAttempt = false;
+  let creditRowIdToRestore: string | null = null;
 
   try {
     const body = await request.json();
@@ -185,6 +213,32 @@ export async function POST(request: NextRequest) {
 
       const userCap = resolveUserCapForAttempt(sub);
 
+      const { data: currentUsage } = await admin
+        .from("usage_tracking")
+        .select("assessments_used, assessments_cap")
+        .eq("user_id", user.id)
+        .eq("period_month", yearMonth)
+        .maybeSingle();
+
+      wasOverCapBeforeAttempt =
+        (currentUsage?.assessments_used ?? 0) >= userCap;
+
+      if (wasOverCapBeforeAttempt) {
+        const nowIso = new Date().toISOString();
+        const { data: fifoRow, error: fifoErr } = await admin
+          .from("credits")
+          .select("id")
+          .eq("user_id", user.id)
+          .gt("credits_remaining", 0)
+          .is("frozen_at", null)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+          .order("purchased_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (fifoErr) console.error("credit fifo row lookup", fifoErr);
+        creditRowIdToRestore = fifoRow?.id ?? null;
+      }
+
       const { data: attemptData, error: attemptErr } = await admin.rpc(
         "attempt_assessment",
         { p_user_id: user.id, p_cap: userCap }
@@ -208,13 +262,25 @@ export async function POST(request: NextRequest) {
       }
 
       if (!ar.allowed) {
+        const { data: creditsData } = await admin
+          .from("credits")
+          .select("credits_remaining")
+          .eq("user_id", user.id)
+          .gt("credits_remaining", 0);
+
+        const creditsRemaining =
+          creditsData?.reduce(
+            (sum, row) => sum + row.credits_remaining,
+            0
+          ) ?? 0;
+
         return NextResponse.json(
           {
             error: "cap_reached",
             assessments_used: ar.assessments_used,
             assessments_cap: ar.assessments_cap,
             reset_date: nextPeriodStartDate(yearMonth),
-            credits_remaining: 0,
+            credits_remaining: creditsRemaining,
           },
           { status: 402 }
         );
@@ -247,6 +313,71 @@ export async function POST(request: NextRequest) {
           { error: "Last user message missing" },
           { status: 400 }
         );
+      }
+    } else {
+      let supabaseAdmin: AdminClient;
+      try {
+        supabaseAdmin = createAdminClient();
+      } catch {
+        return NextResponse.json(
+          { error: "Server is not configured for anonymous assessments" },
+          { status: 503 }
+        );
+      }
+
+      const forwarded = request.headers.get("x-forwarded-for");
+      const ip = forwarded ? forwarded.split(",")[0].trim() : "unknown";
+
+      const fingerprint =
+        request.headers.get("x-fingerprint") || ip;
+
+      const oneDayAgo = new Date();
+      oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+
+      const userMessageCount = messages.filter(
+        (m) => m.role === "user"
+      ).length;
+
+      const { count } = await supabaseAdmin
+        .from("anonymous_assessments")
+        .select("*", { count: "exact", head: true })
+        .eq("fingerprint", fingerprint)
+        .gte("created_at", oneDayAgo.toISOString());
+
+      const capJson = {
+        error: "cap_reached" as const,
+        cap_reached: true,
+        assessments_used: 1,
+        assessments_cap: 1,
+        reset_date: new Date(
+          Date.now() + 24 * 60 * 60 * 1000
+        ).toISOString(),
+        message:
+          "Free assessment used. Create a free account for 5 assessments per month.",
+        upgrade_prompt: true,
+      };
+
+      if (userMessageCount <= 1) {
+        if (count && count >= 1) {
+          return NextResponse.json(capJson, { status: 402 });
+        }
+
+        const { error: anonInsertErr } = await supabaseAdmin
+          .from("anonymous_assessments")
+          .insert({
+            fingerprint,
+            ip_address: ip,
+          });
+
+        if (anonInsertErr) {
+          console.error("anonymous_assessments insert", anonInsertErr);
+          return NextResponse.json(
+            { error: "Could not verify anonymous assessment allowance" },
+            { status: 500 }
+          );
+        }
+      } else if (!count || count < 1) {
+        return NextResponse.json(capJson, { status: 402 });
       }
     }
 
@@ -286,6 +417,12 @@ Current session context:
           { p_user_id: rollbackUserId }
         );
         if (rbErr) console.error("rollback_assessment", rbErr);
+        if (wasOverCapBeforeAttempt && creditRowIdToRestore) {
+          await rollbackCreditForRow(
+            adminForRollback,
+            creditRowIdToRestore
+          );
+        }
       }
       throw claudeErr;
     }

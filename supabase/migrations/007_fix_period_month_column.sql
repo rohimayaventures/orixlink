@@ -1,3 +1,8 @@
+-- Requires: 002_auth_billing.sql
+--   (usage_tracking table must exist first)
+-- Safe to run: only renames a column,
+--   no data loss
+
 -- Align usage_tracking column with RPCs (006) and Stripe webhook: period_month
 do $$
 begin

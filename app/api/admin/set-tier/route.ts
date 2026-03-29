@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     .from("usage_tracking")
     .select("id, assessments_used")
     .eq("user_id", userId)
-    .eq("year_month", ym)
+    .eq("period_month", ym)
     .maybeSingle();
 
   if (ut) {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   } else {
     await admin.from("usage_tracking").insert({
       user_id: userId,
-      year_month: ym,
+      period_month: ym,
       assessments_used: 0,
       assessments_cap: cap,
     });

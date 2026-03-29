@@ -1,7 +1,7 @@
 {
   "name": "OrixLink AI",
   "short_name": "OrixLink",
-  "description": "Universal triage and diagnosis intelligence. Any symptom, any person, any moment.",
+  "description": "AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -11,6 +11,24 @@
   "lang": "en",
   "categories": ["health", "medical"],
   "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon.svg",
       "sizes": "any",

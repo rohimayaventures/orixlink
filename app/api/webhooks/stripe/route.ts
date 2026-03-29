@@ -52,21 +52,34 @@ async function upsertUsageTracking(userId: string, cap: number) {
     .eq('period_month', period)
 }
 
-async function addCredits(userId: string, amount: number) {
-  const period = new Date().toISOString().slice(0, 7)
-  const { data } = await supabaseAdmin
-    .from('usage_tracking')
-    .select('credits_balance')
-    .eq('user_id', userId)
-    .eq('period_month', period)
-    .maybeSingle()
+async function addCredits(
+  userId: string,
+  amount: number,
+  stripePaymentIntentId?: string,
+  packName?: string
+) {
+  const purchasedAt = new Date().toISOString()
+  const expiresAt = new Date(
+    Date.now() + 365 * 24 * 60 * 60 * 1000
+  ).toISOString()
 
-  const current = (data?.credits_balance as number | undefined) ?? 0
-  await supabaseAdmin
-    .from('usage_tracking')
-    .update({ credits_balance: current + amount })
-    .eq('user_id', userId)
-    .eq('period_month', period)
+  const { error } = await supabaseAdmin
+    .from('credits')
+    .insert({
+      user_id: userId,
+      credits_purchased: amount,
+      credits_remaining: amount,
+      stripe_payment_intent_id: stripePaymentIntentId || null,
+      pack_name: packName || null,
+      purchased_at: purchasedAt,
+      expires_at: expiresAt,
+      frozen_at: null,
+    })
+
+  if (error) {
+    console.error('Failed to insert credits:', error)
+    throw error
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -91,6 +104,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { data: existing } = await supabaseAdmin
+      .from('webhook_events')
+      .select('id')
+      .eq('id', event.id)
+      .maybeSingle()
+
+    if (existing) {
+      console.log(`Webhook event ${event.id} already processed`)
+      return NextResponse.json({ received: true })
+    }
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
@@ -101,7 +125,21 @@ export async function POST(request: NextRequest) {
         if (!userId) break
 
         if (creditsAmount) {
-          await addCredits(userId, parseInt(creditsAmount, 10))
+          const packName =
+            session.metadata?.price_key?.replace('credits-', '') || null
+          const pi = session.payment_intent
+          const paymentIntentId =
+            typeof pi === 'string'
+              ? pi
+              : pi && typeof pi === 'object' && 'id' in pi
+                ? (pi as Stripe.PaymentIntent).id
+                : undefined
+          await addCredits(
+            userId,
+            parseInt(creditsAmount, 10),
+            paymentIntentId,
+            packName ?? undefined
+          )
           break
         }
 
@@ -197,6 +235,18 @@ export async function POST(request: NextRequest) {
 
       default:
         break
+    }
+
+    const { error: insertEventErr } = await supabaseAdmin
+      .from('webhook_events')
+      .insert({ id: event.id, event_type: event.type })
+
+    if (insertEventErr) {
+      if (insertEventErr.code === '23505') {
+        console.log(`Webhook event ${event.id} already processed (race)`)
+        return NextResponse.json({ received: true })
+      }
+      throw insertEventErr
     }
 
     return NextResponse.json({ received: true })

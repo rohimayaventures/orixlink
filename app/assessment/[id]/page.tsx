@@ -34,22 +34,45 @@ export default async function AssessmentSessionPage({
     .order("created_at", { ascending: true });
 
   return (
-    <SessionDetailClient
-      session={{
-        id: session.id as string,
-        role: session.role as string,
-        context: session.context as string | null,
-        urgency_level: session.urgency_level as string | null,
-        created_at: session.created_at as string,
-      }}
-      messages={
-        (messages ?? []).map((m) => ({
-          id: m.id as string,
-          role: m.role as string,
-          content: m.content as string,
-          created_at: m.created_at as string,
-        }))
-      }
-    />
+    <div style={{ background: "#080C14", minHeight: "100vh" }}>
+      <SessionDetailClient
+        session={{
+          id: session.id as string,
+          role: session.role as string,
+          context: session.context as string | null,
+          urgency_level: session.urgency_level as string | null,
+          created_at: session.created_at as string,
+        }}
+        messages={
+          (messages ?? []).map((m) => ({
+            id: m.id as string,
+            role: m.role as string,
+            content: m.content as string,
+            created_at: m.created_at as string,
+          }))
+        }
+      />
+      <p
+        style={{
+          fontFamily: "DM Sans, sans-serif",
+          fontSize: 12,
+          color: "rgba(244,239,230,0.45)",
+          textAlign: "center",
+          paddingTop: 24,
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          maxWidth: 720,
+          margin: "0 auto",
+          paddingLeft: 20,
+          paddingRight: 20,
+          paddingBottom: 48,
+          lineHeight: 1.6,
+          boxSizing: "border-box",
+        }}
+      >
+        OrixLink AI assessments are AI-generated and for informational purposes
+        only. Not a substitute for professional medical advice. In an emergency
+        call 911.
+      </p>
+    </div>
   );
 }

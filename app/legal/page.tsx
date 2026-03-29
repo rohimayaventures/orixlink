@@ -249,6 +249,19 @@ export default function LegalPage() {
               OrixLink AI.
             </p>
 
+            <Subheading>HIPAA and regulatory scope</Subheading>
+            <p style={{ marginBottom: "1rem" }}>
+              OrixLink AI is not a covered entity under the Health Insurance
+              Portability and Accountability Act (HIPAA). OrixLink AI is a
+              direct-to-consumer informational tool and does not create a covered
+              relationship between users and a healthcare provider, health plan, or
+              healthcare clearinghouse. Users should not treat OrixLink AI assessments
+              as protected health information (PHI) under HIPAA. If you are a clinical
+              practice using the Clinical Practice tier, please consult your own
+              compliance counsel regarding any applicable HIPAA obligations on your end
+              before using patient-linked features.
+            </p>
+
             <p style={{ marginTop: 0, marginBottom: "0.65rem" }}>
               <strong style={{ fontSize: "1.05rem", color: heading, fontWeight: 600, display: "block" }}>
                 Information we collect
@@ -274,24 +287,40 @@ export default function LegalPage() {
               We use Vercel Analytics to collect anonymous usage data such as page
               views and device type. This data does not identify individual users.
             </p>
+            <p style={{ marginBottom: "1rem" }}>
+              For anonymous users: a browser fingerprint and IP address for rate
+              limiting purposes only, retained for 30 days.
+            </p>
 
-            <Subheading>Anonymous assessments</Subheading>
+            <Subheading>Anonymous assessments and rate limiting</Subheading>
             <p style={{ marginBottom: "1rem" }}>
-              Users who have not created an account may complete one free assessment.
-              Anonymous assessment data is stored only in your browser session
-              (sessionStorage) and is never transmitted to or stored on Rohimaya Health
-              AI servers.
+              Users who have not created an account may complete one free assessment. To
+              prevent abuse of the free assessment, OrixLink AI records a browser
+              fingerprint and IP address in a server-side rate limiting table when an
+              anonymous assessment is submitted. This data is used only to enforce the
+              one free assessment limit and is not linked to any personal profile or used
+              for any other purpose.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              Anonymous sessions are cleared when you close the browser tab. No
-              personally identifying information is collected during an anonymous
-              assessment.
+              The browser fingerprint is derived from non-identifying technical signals
+              including browser type, screen dimensions, and timezone. It does not
+              include cookies, device identifiers, or any personally identifying
+              information.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              If you create an account after completing an anonymous assessment, you
-              may choose to save that session to your account. At that point it is
-              stored under your authenticated profile subject to the data practices
-              described in this policy.
+              Anonymous assessment content &mdash; your symptom description and the AI
+              response &mdash; is not stored on our servers. It exists only in your
+              browser session and is cleared when you close the tab.
+            </p>
+            <p style={{ marginBottom: "1rem" }}>
+              If you create an account after completing an anonymous assessment, you may
+              choose to save that session to your account. At that point the session
+              content is stored under your authenticated profile subject to the data
+              practices described in this policy.
+            </p>
+            <p style={{ marginBottom: "1rem" }}>
+              Rate limiting data (fingerprint and IP) is retained for 30 days and then
+              deleted automatically.
             </p>
 
             <Subheading>How we use your information</Subheading>
@@ -316,9 +345,14 @@ export default function LegalPage() {
             <p style={{ marginBottom: "1rem" }}>
               We share data only with the following service providers as necessary to
               operate the product: Supabase (database and authentication), Stripe
-              (billing and payments), Anthropic (AI assessment generation), Resend
-              (transactional email to deliver follow-up reminders you schedule),
-              Vercel (hosting and analytics).
+              (billing and payments), Anthropic (AI assessment generation), Vercel
+              (hosting and analytics), and Resend (transactional email reminders).
+            </p>
+            <p style={{ marginBottom: "1rem" }}>
+              Transactional emails including follow-up reminders are sent via Resend
+              (resend.com). Loops (loops.so) is integrated for future marketing
+              communications and audience management but is not currently used to
+              process personal data.
             </p>
             <p style={{ marginBottom: "1rem" }}>
               Each provider is subject to their own privacy policy and data handling
@@ -382,10 +416,9 @@ export default function LegalPage() {
 
             <Subheading>Session security</Subheading>
             <p style={{ marginBottom: "1rem" }}>
-              For your protection, OrixLink AI automatically signs you out after 30
-              minutes of inactivity. You will receive a warning 2 minutes before this
-              occurs. This applies to all authenticated sessions regardless of
-              subscription tier.
+              OrixLink AI automatically signs you out after 30 minutes of inactivity. You
+              will receive a warning 2 minutes before this occurs. This applies to all
+              authenticated sessions on all devices.
             </p>
 
             <Subheading>Contact</Subheading>

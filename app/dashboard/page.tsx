@@ -106,39 +106,62 @@ export default async function DashboardPage() {
   const showUpgradeBanner = tier === "free" && remaining === 0;
 
   let creditsBalance = 0;
-  const crRes = await supabase
-    .from("usage_tracking")
-    .select("credits_balance")
+  const { data: creditsData } = await supabase
+    .from("credits")
+    .select("credits_remaining")
     .eq("user_id", user.id)
-    .eq("period_month", periodMonth)
-    .maybeSingle();
-  if (!crRes.error && crRes.data) {
-    const cb = (crRes.data as { credits_balance?: number }).credits_balance;
-    if (typeof cb === "number" && cb > 0) creditsBalance = cb;
-  }
+    .gt("credits_remaining", 0);
+  creditsBalance =
+    creditsData?.reduce((sum, row) => sum + row.credits_remaining, 0) ?? 0;
 
-  const { data: sessions } = await supabase
+  const { data: recentSessions } = await supabase
     .from("sessions")
-    .select("id, role, context, created_at, urgency_level")
+    .select(
+      `
+      id,
+      urgency_level,
+      created_at,
+      role,
+      context,
+      messages (
+        content,
+        role,
+        created_at
+      )
+    `
+    )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const sessionIds = (sessions ?? []).map((s) => s.id as string);
-  const previewBySession: Record<string, string> = {};
-  if (sessionIds.length) {
-    const { data: msgs } = await supabase
-      .from("messages")
-      .select("session_id, content, role, created_at")
-      .in("session_id", sessionIds)
-      .order("created_at", { ascending: true });
-    for (const m of msgs ?? []) {
-      if (m.role !== "user") continue;
-      const sid = m.session_id as string;
-      if (previewBySession[sid]) continue;
-      previewBySession[sid] = String(m.content);
-    }
-  }
+  type SessionMsg = {
+    content: string;
+    role: string;
+    created_at: string;
+  };
+
+  const sessionsWithPreview =
+    recentSessions?.map((session) => {
+      const msgs = (session.messages as SessionMsg[] | null) ?? [];
+      const firstUserMessage = msgs
+        .filter((m) => m.role === "user")
+        .sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() -
+            new Date(b.created_at).getTime()
+        )[0];
+      const preview = firstUserMessage?.content
+        ? String(firstUserMessage.content)
+        : undefined;
+      return {
+        id: session.id as string,
+        role: session.role as string,
+        context: session.context as string | null,
+        created_at: session.created_at as string,
+        urgency_level: session.urgency_level as string | null,
+        preview,
+      };
+    }) ?? [];
 
   const resetLabel = formatResetDate(sub, periodMonth);
 
@@ -215,15 +238,13 @@ export default async function DashboardPage() {
         {/* Section 2 — quick action */}
         <Link
           href="/"
+          className="orix-btn-gold"
           style={{
             display: "block",
             width: "100%",
             textAlign: "center",
             padding: "14px 20px",
             borderRadius: 12,
-            background: GOLD,
-            color: "#080C14",
-            fontWeight: 600,
             fontFamily: "DM Sans, sans-serif",
             textDecoration: "none",
             marginBottom: 24,
@@ -240,11 +261,11 @@ export default async function DashboardPage() {
           >
             Recent assessments
           </h2>
-          {!sessions?.length ? (
+          {!sessionsWithPreview.length ? (
             <p
               style={{
                 textAlign: "center",
-                color: "rgba(244,239,230,0.4)",
+                color: "rgba(244,239,230,0.65)",
                 fontSize: 14,
                 margin: "8px 0 0",
                 fontFamily: "DM Sans, sans-serif",
@@ -254,19 +275,20 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {sessions.map((s) => {
-                const u = s.urgency_level as string | null;
+              {sessionsWithPreview.map((s) => {
+                const u = s.urgency_level;
                 const meta =
                   u && URGENCY_ROW[u]
                     ? URGENCY_ROW[u]
                     : URGENCY_ROW.CONTACT_DOCTOR_TODAY;
-                const dateStr = new Date(s.created_at as string).toLocaleDateString(
+                const dateStr = new Date(s.created_at).toLocaleDateString(
                   "en-US",
                   { month: "long", day: "numeric", year: "numeric" }
                 );
                 return (
                   <li
-                    key={s.id as string}
+                    key={s.id}
+                    className="orix-clickable-row"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -303,8 +325,8 @@ export default async function DashboardPage() {
                         }}
                       >
                         {rowPreview(
-                          { role: s.role as string, context: s.context as string | null },
-                          previewBySession[s.id as string]
+                          { role: s.role, context: s.context },
+                          s.preview
                         )}
                       </p>
                       <p
@@ -320,13 +342,12 @@ export default async function DashboardPage() {
                     </div>
                     <Link
                       href={`/assessment/${s.id}`}
+                      className="orix-link"
                       style={{
                         flexShrink: 0,
                         fontSize: 13,
                         fontWeight: 600,
-                        color: GOLD,
                         fontFamily: "DM Sans, sans-serif",
-                        textDecoration: "none",
                       }}
                     >
                       View
@@ -342,11 +363,10 @@ export default async function DashboardPage() {
         <p style={{ textAlign: "center", marginBottom: 20 }}>
           <Link
             href="/history"
+            className="orix-link"
             style={{
               fontSize: 13,
-              color: "rgba(200,169,110,0.7)",
               fontFamily: "DM Sans, sans-serif",
-              textDecoration: "none",
             }}
           >
             View full history

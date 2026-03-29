@@ -69,13 +69,11 @@ export default function NotFound() {
         >
           <Link
             href="/"
+            className="orix-btn-gold"
             style={{
               display: "block",
               padding: "14px 24px",
               borderRadius: 10,
-              background: "#C8A96E",
-              color: "#080C14",
-              fontWeight: 600,
               fontSize: 14,
               fontFamily: "DM Sans, sans-serif",
               textDecoration: "none",
@@ -86,13 +84,11 @@ export default function NotFound() {
           </Link>
           <Link
             href="/"
+            className="orix-btn-outline"
             style={{
               display: "block",
               padding: "14px 24px",
               borderRadius: 10,
-              background: "transparent",
-              border: "1px solid rgba(200,169,110,0.4)",
-              color: "#C8A96E",
               fontWeight: 600,
               fontSize: 14,
               fontFamily: "DM Sans, sans-serif",
@@ -108,7 +104,7 @@ export default function NotFound() {
           style={{
             marginTop: 28,
             fontSize: 12,
-            color: "rgba(244,239,230,0.3)",
+            color: "rgba(244,239,230,0.45)",
             fontFamily: "DM Sans, sans-serif",
           }}
         >

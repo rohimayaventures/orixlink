@@ -140,7 +140,6 @@ h4, h5, h6 {
   font-size: 1rem;
   color: var(--text-on-light);
   transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
 }
 
 .input-clinical:focus {
@@ -260,7 +259,83 @@ h4, h5, h6 {
 
 ::selection { background: rgba(200,169,110,0.2); color: var(--text-on-light); }
 
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+:focus-visible {
+  outline: 2px solid #C8A96E;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Meridian Oracle — interactive utility buttons */
+.orix-btn-gold {
+  background: #C8A96E;
+  color: #080C14;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s ease,
+    transform 0.1s ease;
+}
+.orix-btn-gold:hover { opacity: 0.9; }
+.orix-btn-gold:active { transform: scale(0.98); }
+
+.orix-btn-outline {
+  background: transparent;
+  color: #C8A96E;
+  border: 1px solid rgba(200,169,110,0.4);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease,
+    border-color 0.15s ease;
+}
+.orix-btn-outline:hover {
+  background: rgba(200,169,110,0.08);
+  border-color: rgba(200,169,110,0.7);
+}
+.orix-btn-outline:active {
+  background: rgba(200,169,110,0.12);
+}
+
+.orix-btn-ghost {
+  background: transparent;
+  color: rgba(244,239,230,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease,
+    color 0.15s ease;
+}
+.orix-btn-ghost:hover {
+  background: rgba(255,255,255,0.04);
+  color: rgba(244,239,230,0.6);
+}
+
+.orix-clickable-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.orix-clickable-row:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.orix-link {
+  color: #C8A96E;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+.orix-link:hover { opacity: 0.75; }
 
 /* Auth modal: full-bleed panel on small screens (Meridian Oracle) */
 @media (max-width: 640px) {

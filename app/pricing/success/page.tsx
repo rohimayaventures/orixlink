@@ -210,7 +210,7 @@ function PricingSuccessInner() {
         style={{ color: "rgba(240,237,232,0.45)", fontFamily: "var(--font-body), sans-serif" }}
       >
         Questions? Reach us at{" "}
-        <a href="mailto:support@rohimaya.ai" style={{ color: GOLD }}>
+        <a href="mailto:support@rohimaya.ai" className="orix-link">
           support@rohimaya.ai
         </a>
       </p>

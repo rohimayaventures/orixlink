@@ -211,15 +211,13 @@ export default function SessionDetailClient({
 
       <Link
         href="/assessment"
+        className="orix-btn-gold"
         style={{
           display: "block",
           width: "100%",
           textAlign: "center",
           padding: "14px 20px",
           borderRadius: 12,
-          background: GOLD,
-          color: BG,
-          fontWeight: 600,
           fontFamily: "DM Sans, sans-serif",
           textDecoration: "none",
         }}

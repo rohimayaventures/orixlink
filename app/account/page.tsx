@@ -16,7 +16,11 @@ export default async function AccountPage() {
   const [profileRes, subRes, creditsRes] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
     supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle(),
-    supabase.from("credits").select("credits_remaining").eq("user_id", user.id),
+    supabase
+      .from("credits")
+      .select("credits_remaining")
+      .eq("user_id", user.id)
+      .gt("credits_remaining", 0),
   ]);
 
   const usageAligned =
@@ -31,10 +35,9 @@ export default async function AccountPage() {
       period_month: yearMonth,
     };
 
-  const creditSum = (creditsRes.data ?? []).reduce(
-    (s, r) => s + (Number(r.credits_remaining) || 0),
-    0
-  );
+  const creditSum =
+    creditsRes.data?.reduce((sum, row) => sum + row.credits_remaining, 0) ??
+    0;
 
   return (
     <AccountClient

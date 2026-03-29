@@ -87,7 +87,7 @@ export async function loadAdminDashboardData(
       .select("*", { count: "exact", head: true })
       .in("tier", ["pro", "family", "clinical", "lifetime"])
       .eq("status", "active"),
-    admin.from("usage_tracking").select("assessments_used").eq("year_month", ym),
+    admin.from("usage_tracking").select("assessments_used").eq("period_month", ym),
   ]);
 
   const totalAssessmentsMonth = (usageMonthRes.data ?? []).reduce(
@@ -143,7 +143,7 @@ export async function loadAdminDashboardData(
         admin
           .from("usage_tracking")
           .select("user_id,assessments_used,assessments_cap")
-          .eq("year_month", ym)
+          .eq("period_month", ym)
           .in("user_id", ids),
         admin
           .from("credits")
@@ -251,7 +251,7 @@ export async function loadAdminDashboardData(
   const { data: topUsage } = await admin
     .from("usage_tracking")
     .select("user_id,assessments_used")
-    .eq("year_month", ym)
+    .eq("period_month", ym)
     .order("assessments_used", { ascending: false })
     .limit(10);
 
@@ -267,7 +267,7 @@ export async function loadAdminDashboardData(
   const { data: credHist } = await admin
     .from("credits")
     .select(
-      "id,user_id,pack_name,credits_purchased,credits_remaining,purchased_at,frozen"
+      "id,user_id,pack_name,credits_purchased,credits_remaining,purchased_at,frozen_at"
     )
     .order("purchased_at", { ascending: false })
     .limit(50);
@@ -282,7 +282,7 @@ export async function loadAdminDashboardData(
       credits_purchased: Number(c.credits_purchased) || 0,
       credits_remaining: Number(c.credits_remaining) || 0,
       purchased_at: (c.purchased_at as string) ?? "",
-      frozen: Boolean(c.frozen),
+      frozen: c.frozen_at != null,
     });
   }
 

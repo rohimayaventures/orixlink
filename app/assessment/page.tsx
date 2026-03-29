@@ -45,6 +45,18 @@ const CONTEXTS = [
 
 const ASSESSMENT_DRAFT_KEY = 'orixlink_assessment_draft'
 
+function buildAssessFingerprint(): string {
+  return btoa(
+    [
+      navigator.userAgent,
+      navigator.language,
+      screen.width,
+      screen.height,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ].join('|'),
+  ).slice(0, 32)
+}
+
 export default function AssessmentPage() {
   const router = useRouter()
   const { user, openAuthModal } = useAuth()
@@ -178,9 +190,13 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
     `.trim()
 
     try {
+      const fingerprint = buildAssessFingerprint()
       const res = await fetch('/api/assess', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-fingerprint': fingerprint,
+        },
         body: JSON.stringify({
           messages: [{ role: 'user', content: userMessage }],
           role, context, language,
@@ -235,7 +251,6 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
     fontFamily: 'var(--font-body)',
     fontSize: '0.9375rem',
     color: TEXT,
-    outline: 'none',
     transition: 'border-color 0.2s',
   }
 
@@ -309,7 +324,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
             <p style={{ color: MUTED, marginBottom: '1.5rem', lineHeight: 1.6 }}>
               You have used your free anonymous assessment. Sign in to save results and continue with your included assessments.
             </p>
-            <button type="button" onClick={openAuthModal} style={{ marginBottom: 12, width: '100%', padding: '14px 20px', borderRadius: 8, background: GOLD, color: BG_PAGE, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <button type="button" onClick={openAuthModal} className="orix-btn-gold" style={{ marginBottom: 12, width: '100%', padding: '14px 20px', borderRadius: 8 }}>
               Sign in or create account
             </button>
             <button
@@ -318,10 +333,8 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 clearAssessmentDraft()
                 router.push('/')
               }}
-              style={{
-                width: '100%', padding: '12px 20px', borderRadius: 8,
-                background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: GOLD, cursor: 'pointer', fontWeight: 600,
-              }}
+              className="orix-btn-outline"
+              style={{ width: '100%', padding: '12px 20px', borderRadius: 8, fontWeight: 600 }}
             >
               Back to home
             </button>
@@ -507,10 +520,11 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={!canProceedStep1}
+                className="orix-btn-gold"
                 style={{
                   width: '100%', opacity: canProceedStep1 ? 1 : 0.4, cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
-                  padding: '14px 20px', borderRadius: 8, border: 'none', fontWeight: 600,
-                  background: GOLD, color: BG_PAGE, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '14px 20px', borderRadius: 8,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 }}
               >
                 Continue <ArrowRightIcon style={{ width: 16, height: 16 }} />
@@ -566,7 +580,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                       'e.g. 34 weeks'
                     }
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
@@ -576,9 +590,9 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 <button
                   type="button"
                   onClick={() => setStep(1)}
+                  className="orix-btn-outline"
                   style={{
-                    flexShrink: 0, padding: '12px 18px', borderRadius: 8, fontWeight: 600,
-                    background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: GOLD,
+                    flexShrink: 0, padding: '12px 18px', borderRadius: 8,
                     display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
                   }}
                 >
@@ -588,10 +602,11 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   type="button"
                   onClick={() => setStep(3)}
                   disabled={!canProceedStep2}
+                  className="orix-btn-gold"
                   style={{
                     flex: 1, opacity: canProceedStep2 ? 1 : 0.4, cursor: canProceedStep2 ? 'pointer' : 'not-allowed',
-                    padding: '14px 20px', borderRadius: 8, border: 'none', fontWeight: 600,
-                    background: GOLD, color: BG_PAGE, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '14px 20px', borderRadius: 8,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   }}
                 >
                   Continue <ArrowRightIcon style={{ width: 16, height: 16 }} />
@@ -620,7 +635,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     onChange={(e) => setPatientAge(e.target.value)}
                     placeholder="e.g. 38-year-old male"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
@@ -633,7 +648,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     placeholder="Describe what you are seeing or feeling. Location, severity, onset. The more detail the better."
                     rows={5}
                     style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.65 }}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                   <span style={{ fontSize: '0.75rem', color: 'rgba(244,239,230,0.5)', fontFamily: 'var(--font-mono)' }}>
@@ -649,7 +664,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     onChange={(e) => setDuration(e.target.value)}
                     placeholder="e.g. 3 days, worsening since yesterday"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
@@ -662,7 +677,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     onChange={(e) => setModifiers(e.target.value)}
                     placeholder="e.g. Worse when hanging down, better when elevated"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
@@ -675,7 +690,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     onChange={(e) => setMedications(e.target.value)}
                     placeholder="e.g. Aspirin, Plavix, metoprolol"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
                     onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
@@ -707,9 +722,9 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 <button
                   type="button"
                   onClick={() => setStep(2)}
+                  className="orix-btn-outline"
                   style={{
-                    flexShrink: 0, padding: '12px 18px', borderRadius: 8, fontWeight: 600,
-                    background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: GOLD,
+                    flexShrink: 0, padding: '12px 18px', borderRadius: 8,
                     display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
                   }}
                 >
@@ -719,10 +734,11 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   type="button"
                   onClick={handleSubmit}
                   disabled={!canSubmit || loading}
+                  className="orix-btn-gold"
                   style={{
                     flex: 1, opacity: canSubmit && !loading ? 1 : 0.4, cursor: canSubmit && !loading ? 'pointer' : 'not-allowed',
-                    padding: '14px 20px', borderRadius: 8, border: 'none', fontWeight: 600,
-                    background: GOLD, color: BG_PAGE, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '14px 20px', borderRadius: 8,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   }}
                 >
                   {loading ? 'Running assessment...' : 'Run OrixLink Assessment'}

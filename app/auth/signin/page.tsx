@@ -169,7 +169,7 @@ function AuthSignInInner() {
             href="/pricing"
             style={{
               fontSize: 13,
-              color: "rgba(244,239,230,0.3)",
+              color: "rgba(244,239,230,0.45)",
               fontFamily: "DM Sans, sans-serif",
               textDecoration: "none",
             }}

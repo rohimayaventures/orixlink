@@ -37,17 +37,21 @@ export async function POST(request: NextRequest) {
       user.email?.split("@")[0] ||
       "there";
 
-    const { error } = await supabase.from("reminders").insert({
-      user_id: user.id,
-      session_id: sessionId,
-      email: user.email,
-      first_name: firstName,
-      chief_complaint: chiefComplaint,
-      urgency_tier: urgencyTier,
-      hours_delay: hoursDelay,
-      send_at: sendAt.toISOString(),
-      status: "pending",
-    });
+    const { data, error } = await supabase
+      .from("reminders")
+      .insert({
+        user_id: user.id,
+        session_id: sessionId,
+        email: user.email,
+        first_name: firstName,
+        chief_complaint: chiefComplaint,
+        urgency_tier: urgencyTier,
+        hours_delay: hoursDelay,
+        send_at: sendAt.toISOString(),
+        status: "pending",
+      })
+      .select("id")
+      .single();
 
     if (error) {
       console.error("Failed to save reminder:", error);
@@ -60,6 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       sendAt: sendAt.toISOString(),
+      reminderId: data?.id ?? null,
     });
   } catch (error) {
     console.error("Set reminder error:", error);

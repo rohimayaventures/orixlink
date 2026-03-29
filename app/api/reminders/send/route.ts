@@ -12,10 +12,6 @@ const supabaseAdmin = createClient(
 const baseUrl =
   process.env.NEXT_PUBLIC_APP_URL || "https://triage.rohimaya.ai";
 
-const TRANSACTIONAL_ID =
-  process.env.LOOPS_REMINDER_TRANSACTIONAL_ID ||
-  "orixlink-followup-reminder";
-
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -94,7 +90,7 @@ function buildEmailHtml(params: {
             />
             <p style="font-family:Arial,sans-serif;
               font-size:11px;
-              color:rgba(200,169,110,0.5);
+              color:rgba(200,169,110,0.7);
               letter-spacing:0.14em;
               text-transform:uppercase;
               margin:0;">
@@ -206,7 +202,7 @@ function buildEmailHtml(params: {
 
             <p style="font-family:Arial,sans-serif;
               font-size:13px;
-              color:rgba(244,239,230,0.4);
+              color:rgba(244,239,230,0.65);
               margin:0;line-height:1.6;
               text-align:center;">
               Your assessment history and full results
@@ -221,7 +217,7 @@ function buildEmailHtml(params: {
           <td style="padding:28px 0 0 0;">
             <p style="font-family:Arial,sans-serif;
               font-size:12px;
-              color:rgba(244,239,230,0.3);
+              color:rgba(244,239,230,0.45);
               margin:0 0 12px 0;line-height:1.6;
               text-align:center;">
               This reminder was scheduled by you after
@@ -230,7 +226,7 @@ function buildEmailHtml(params: {
             </p>
             <p style="font-family:Arial,sans-serif;
               font-size:11px;
-              color:rgba(244,239,230,0.2);
+              color:rgba(244,239,230,0.45);
               margin:0 0 16px 0;line-height:1.6;
               text-align:center;">
               OrixLink AI is not a substitute for
@@ -241,11 +237,11 @@ function buildEmailHtml(params: {
             </p>
             <p style="font-family:Arial,sans-serif;
               font-size:11px;
-              color:rgba(244,239,230,0.2);
+              color:rgba(244,239,230,0.45);
               margin:0;text-align:center;">
               Questions?
               <a href="mailto:support@rohimaya.ai"
-                style="color:rgba(200,169,110,0.5);
+                style="color:rgba(200,169,110,0.7);
                   text-decoration:none;">
                 support@rohimaya.ai
               </a>
@@ -263,7 +259,7 @@ function buildEmailHtml(params: {
             </div>
             <p style="font-family:Arial,sans-serif;
               font-size:11px;
-              color:rgba(244,239,230,0.15);
+              color:rgba(244,239,230,0.45);
               margin:0;letter-spacing:0.06em;">
               &copy; 2026 Rohimaya Health AI
               &nbsp;&middot;&nbsp;

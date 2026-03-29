@@ -34,6 +34,18 @@ import { parseAssessment, type ParsedAssessment } from '@/lib/parseAssessment'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
+function buildAssessFingerprint(): string {
+  return btoa(
+    [
+      navigator.userAgent,
+      navigator.language,
+      screen.width,
+      screen.height,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ].join('|'),
+  ).slice(0, 32)
+}
+
 const TEXT = '#F4EFE6'
 const MUTED = 'rgba(244,239,230,0.5)'
 const CARD_BG = '#0D1220'
@@ -407,7 +419,11 @@ export default function ResultsPage() {
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
   const [showHistoryWarning, setShowHistoryWarning] = useState(false)
   const [userTier, setUserTier] = useState<ReminderUserTier>('free')
+  const [showReminderSkeleton, setShowReminderSkeleton] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  const isPaidUser =
+    userTier === 'pro' || userTier === 'family' || userTier === 'lifetime'
 
   useEffect(() => {
     const savedResponse = sessionStorage.getItem('orixlink_response')
@@ -464,6 +480,19 @@ export default function ResultsPage() {
   }, [user, supabase])
 
   useEffect(() => {
+    if (!isPaidUser) return
+    if (apiSessionId) {
+      setShowReminderSkeleton(false)
+      return
+    }
+    setShowReminderSkeleton(true)
+    const timeout = window.setTimeout(() => {
+      setShowReminderSkeleton(false)
+    }, 8000)
+    return () => window.clearTimeout(timeout)
+  }, [apiSessionId, isPaidUser])
+
+  useEffect(() => {
     if (user || messages.length < 2) return
     const lastAssistant = [...messages]
       .reverse()
@@ -497,9 +526,13 @@ export default function ResultsPage() {
     const next: Message[] = [...prior, { role: 'user', content: userText }]
     setMessages(next)
     try {
+      const fingerprint = buildAssessFingerprint()
       const res = await fetch('/api/assess', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-fingerprint': fingerprint,
+        },
         body: JSON.stringify({
           messages: next,
           role: session.role,
@@ -616,11 +649,10 @@ export default function ResultsPage() {
           >
             <button
               type="button"
-              className="inline-flex min-h-[40px] items-center gap-1.5 px-3 sm:min-h-0 sm:px-4"
+              className="orix-btn-outline inline-flex min-h-[40px] items-center gap-1.5 px-3 sm:min-h-0 sm:px-4"
               style={{
-                fontSize: '0.8125rem', fontWeight: 600,
-                background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: '#C8A96E',
-                borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-body), sans-serif',
+                fontSize: '0.8125rem',
+                borderRadius: 8, fontFamily: 'var(--font-body), sans-serif',
               }}
             >
               <span className="hidden sm:inline">New Assessment </span>
@@ -759,7 +791,7 @@ export default function ResultsPage() {
             style={{
               flex: 1, borderRadius: 8, padding: '10px 14px',
               background: '#141824', border: '1px solid rgba(255,255,255,0.1)', color: TEXT,
-              fontSize: '0.9375rem', fontFamily: 'var(--font-body), sans-serif', outline: 'none',
+              fontSize: '0.9375rem', fontFamily: 'var(--font-body), sans-serif',
             }}
             onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
             onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
@@ -768,11 +800,11 @@ export default function ResultsPage() {
             type="button"
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
+            className="orix-btn-gold"
             style={{
               padding: '12px 18px', borderRadius: 8, flexShrink: 0,
               opacity: input.trim() && !loading ? 1 : 0.4,
               cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
-              background: '#C8A96E', color: '#080C14', fontWeight: 600, border: 'none',
             }}
           >
             <PaperPlaneIcon style={{ width: 16, height: 16 }} />
@@ -784,41 +816,83 @@ export default function ResultsPage() {
         </p>
       </div>
 
-      {latestAssessment &&
-        (!user || userTier === 'free' || apiSessionId) && (
-          <div
-            style={{
-              maxWidth: 720,
-              width: '100%',
-              margin: '0 auto',
-              padding: '0 16px 8px',
-            }}
-          >
+      {latestAssessment && (
+        <div
+          style={{
+            maxWidth: 720,
+            width: '100%',
+            margin: '0 auto',
+            padding: '0 16px 8px',
+          }}
+        >
+          {isPaidUser ? (
+            apiSessionId ? (
+              <ReminderPrompt
+                sessionId={apiSessionId}
+                chiefComplaint={
+                  symptoms ||
+                  (typeof session.symptoms === 'string'
+                    ? session.symptoms
+                    : '') ||
+                  'Your recent assessment'
+                }
+                urgencyTier={urgencyCfg.label}
+                userTier={userTier}
+              />
+            ) : showReminderSkeleton ? (
+              <div
+                style={{
+                  background: '#0D1220',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: '12px',
+                  padding: '20px 24px',
+                  marginTop: '24px',
+                  height: '88px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: '180px',
+                    height: '14px',
+                    background: 'rgba(200,169,110,0.1)',
+                    borderRadius: '4px',
+                    animation:
+                      'orixlink-usage-skeleton-pulse 1.5s ease-in-out infinite',
+                  }}
+                />
+              </div>
+            ) : null
+          ) : (
             <ReminderPrompt
               sessionId={apiSessionId ?? ''}
               chiefComplaint={
                 symptoms ||
-                (typeof session.symptoms === 'string' ? session.symptoms : '') ||
+                (typeof session.symptoms === 'string'
+                  ? session.symptoms
+                  : '') ||
                 'Your recent assessment'
               }
               urgencyTier={urgencyCfg.label}
               userTier={userTier}
             />
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
       {/* ── Floating share button ── */}
       {latestAssessment && (
         <button
           type="button"
           onClick={() => setShowShare(true)}
+          className="orix-btn-gold"
           style={{
             position: 'fixed', bottom: 28, right: 24, zIndex: 40,
             borderRadius: 100, padding: '12px 20px',
             boxShadow: '0 4px 24px rgba(200,169,110,0.25), 0 2px 8px rgba(0,0,0,0.35)',
             display: 'flex', alignItems: 'center', gap: 8,
             fontSize: '0.875rem',
-            background: '#C8A96E', color: '#080C14', fontWeight: 600, border: 'none', cursor: 'pointer',
           }}
         >
           <Share1Icon style={{ width: 16, height: 16 }} />
@@ -875,8 +949,10 @@ export default function ResultsPage() {
               <button
                 type="button"
                 onClick={handleCopy}
+                className="orix-clickable-row"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 16,
+                  width: '100%',
                   padding: '18px 20px', borderRadius: 12, textAlign: 'left',
                   border: copied ? '1.5px solid #C8A96E' : CARD_BORDER,
                   background: copied ? 'rgba(200,169,110,0.12)' : '#141824',
@@ -905,8 +981,10 @@ export default function ResultsPage() {
               <button
                 type="button"
                 onClick={handlePrint}
+                className="orix-clickable-row"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 16,
+                  width: '100%',
                   padding: '18px 20px', borderRadius: 12, textAlign: 'left',
                   border: CARD_BORDER,
                   background: '#141824',

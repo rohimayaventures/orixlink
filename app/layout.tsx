@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans, DM_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import LegalOverlay from "@/components/LegalOverlay";
@@ -30,15 +30,18 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "OrixLink AI — Where every symptom finds its answer",
   description:
-    "Universal clinical triage and AI-assisted symptom assessment. Any symptom. Any person. No prior medical context required.",
+    "OrixLink AI provides AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required. Start free at triage.rohimaya.ai.",
   keywords: [
     "symptom checker",
+    "symptom triage",
     "clinical triage",
     "health triage",
     "clinical triage AI",
+    "symptom assessment",
     "AI symptom assessment",
     "symptom analysis",
     "AI health guidance",
+    "health guidance",
     "medical symptom tool",
     "healthcare AI",
     "OrixLink",
@@ -46,22 +49,32 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "OrixLink AI",
-    description: "Where every symptom finds its answer.",
+    description:
+      "OrixLink AI provides AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required. Start free at triage.rohimaya.ai.",
     type: "website",
     siteName: "OrixLink AI",
   },
   twitter: {
     card: "summary_large_image",
     title: "OrixLink AI",
-    description: "Where every symptom finds its answer.",
+    description:
+      "OrixLink AI provides AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required. Start free at triage.rohimaya.ai.",
   },
   robots: {
     index: true,
     follow: true,
   },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml", sizes: "any" }],
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#080C14",
 };
 
 export default function RootLayout({

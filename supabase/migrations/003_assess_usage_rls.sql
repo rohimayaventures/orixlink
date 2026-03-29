@@ -1,3 +1,9 @@
+-- NOTE: year_month was renamed to period_month
+-- in migration 007_fix_period_month_column.sql
+-- This file has been updated to reflect the
+-- final column name. Do not re-run this migration
+-- against a database that has already applied 007.
+
 -- Per-user assessment cap column, tighten RLS (server-only session/message inserts), usage RPCs
 
 alter table public.subscriptions
@@ -34,7 +40,7 @@ begin
 end;
 $$;
 
-create or replace function public.increment_usage_tracking(p_user_id uuid, p_year_month text)
+create or replace function public.increment_usage_tracking(p_user_id uuid, p_period_month text)
 returns void
 language sql
 security definer
@@ -42,7 +48,7 @@ set search_path = public
 as $$
   update public.usage_tracking
   set assessments_used = assessments_used + 1
-  where user_id = p_user_id and year_month = p_year_month;
+  where user_id = p_user_id and period_month = p_period_month;
 $$;
 
 revoke all on function public.consume_one_credit(uuid) from public;
