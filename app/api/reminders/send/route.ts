@@ -281,9 +281,17 @@ function buildEmailHtml(params: {
 }
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
   const cronSecret = request.headers.get("x-cron-secret");
-  if (cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const isValidCron = cronSecret === process.env.CRON_SECRET;
+  const isValidAuth = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+  if (!isValidCron && !isValidAuth) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   try {
