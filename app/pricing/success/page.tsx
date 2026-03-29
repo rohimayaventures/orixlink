@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import AppShell from "@/components/AppShell";
 
 const OBS = "#080C14";
 const GOLD = "#C8A96E";
@@ -219,24 +220,23 @@ function PricingSuccessInner() {
 
 export default function PricingSuccessPage() {
   return (
-    <main
-      className="min-h-screen flex flex-col items-center justify-center py-16"
-      style={{ background: OBS }}
-    >
-      <Suspense
-        fallback={
-          <div className="text-center px-6">
-            <p
-              className="font-mono text-sm"
-              style={{ color: "rgba(200,169,110,0.85)" }}
-            >
-              Loading…
-            </p>
-          </div>
-        }
-      >
-        <PricingSuccessInner />
-      </Suspense>
-    </main>
+    <AppShell contentTopPadding={96}>
+      <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[calc(100vh-12rem)]">
+        <Suspense
+          fallback={
+            <div className="text-center px-6">
+              <p
+                className="font-mono text-sm"
+                style={{ color: "rgba(200,169,110,0.85)" }}
+              >
+                Loading…
+              </p>
+            </div>
+          }
+        >
+          <PricingSuccessInner />
+        </Suspense>
+      </div>
+    </AppShell>
   );
 }

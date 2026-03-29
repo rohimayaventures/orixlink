@@ -79,23 +79,49 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
 
   if (!user) {
     return (
-      <button
-        type="button"
-        onClick={openAuthModal}
-        style={{
-          padding: "6px 14px",
-          borderRadius: 8,
-          border: `1.5px solid ${gold}`,
-          background: "transparent",
-          color: isDark ? gold : "var(--gold)",
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          cursor: "pointer",
-          fontFamily: "var(--font-body), sans-serif",
-        }}
-      >
-        Sign in
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <Link
+          href="/pricing"
+          style={{
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            color: muted,
+            textDecoration: "none",
+            fontFamily: "var(--font-body), sans-serif",
+          }}
+        >
+          Pricing
+        </Link>
+        <Link
+          href="/auth/signup"
+          style={{
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            color: gold,
+            textDecoration: "none",
+            fontFamily: "var(--font-body), sans-serif",
+          }}
+        >
+          Sign up
+        </Link>
+        <button
+          type="button"
+          onClick={openAuthModal}
+          style={{
+            padding: "6px 14px",
+            borderRadius: 8,
+            border: `1.5px solid ${gold}`,
+            background: "transparent",
+            color: isDark ? gold : "var(--gold)",
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "var(--font-body), sans-serif",
+          }}
+        >
+          Sign in
+        </button>
+      </div>
     );
   }
 
@@ -113,6 +139,18 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <Link
+        href="/pricing"
+        style={{
+          fontSize: "0.8125rem",
+          fontWeight: 600,
+          color: gold,
+          textDecoration: "none",
+          fontFamily: "var(--font-body), sans-serif",
+        }}
+      >
+        Pricing
+      </Link>
       {remaining !== null && (
         <span
           style={{

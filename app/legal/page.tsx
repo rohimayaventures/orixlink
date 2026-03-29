@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Legal — OrixLink AI",
@@ -7,36 +8,34 @@ export const metadata: Metadata = {
     "Medical disclaimer, terms of use, and privacy policy for OrixLink AI by Rohimaya Health AI.",
 };
 
+const muted = "var(--text-muted-dark)";
+const heading = "var(--text-on-dark)";
+const rule = { border: "none" as const, borderTop: "1px solid var(--obsidian-muted)", margin: "0 0 3rem" };
+
 export default function LegalPage() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#ffffff",
-        color: "#1a1a1a",
-        fontFamily: "'DM Sans', sans-serif",
-        padding: "60px 24px 100px",
-      }}
-    >
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+    <AppShell contentTopPadding={96}>
+      <div className="px-5 sm:px-8 pb-16" style={{ maxWidth: 720, margin: "0 auto" }}>
         <Link
           href="/"
           style={{
             display: "inline-block",
             fontSize: "0.8125rem",
-            color: "#888888",
+            color: "var(--gold-muted)",
             textDecoration: "none",
             marginBottom: "2rem",
+            fontFamily: "var(--font-mono)",
           }}
         >
           &larr; Back to OrixLink AI
         </Link>
 
         <h1
+          className="font-display"
           style={{
             fontSize: "2rem",
             fontWeight: 500,
-            color: "#0f0f0f",
+            color: heading,
             marginBottom: "0.25rem",
             lineHeight: 1.2,
           }}
@@ -46,26 +45,26 @@ export default function LegalPage() {
         <p
           style={{
             fontSize: "0.8125rem",
-            color: "#999999",
+            color: muted,
             marginBottom: "3rem",
+            fontFamily: "var(--font-mono)",
           }}
         >
           Effective March 24, 2026
         </p>
 
-        {/* ── Medical Disclaimer ──────────────────────────────────── */}
         <section style={{ marginBottom: "3rem" }}>
           <h2
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: "#0f0f0f",
+              color: heading,
               marginBottom: "1rem",
             }}
           >
             Medical Disclaimer
           </h2>
-          <div style={{ fontSize: "0.9375rem", color: "#444444", lineHeight: 1.8 }}>
+          <div style={{ fontSize: "0.9375rem", color: muted, lineHeight: 1.8 }}>
             <p style={{ marginBottom: "1rem" }}>
               OrixLink AI is not a substitute for professional medical advice,
               diagnosis, or treatment. The information provided by this tool is
@@ -83,7 +82,7 @@ export default function LegalPage() {
               of information provided by OrixLink AI.
             </p>
             <p>
-              <strong style={{ color: "#0f0f0f" }}>
+              <strong style={{ color: heading }}>
                 If you believe you are experiencing a medical emergency, call
                 911 or go to your nearest emergency department immediately.
               </strong>
@@ -91,21 +90,20 @@ export default function LegalPage() {
           </div>
         </section>
 
-        <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "0 0 3rem" }} />
+        <hr style={rule} />
 
-        {/* ── Terms of Use ────────────────────────────────────────── */}
         <section style={{ marginBottom: "3rem" }}>
           <h2
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: "#0f0f0f",
+              color: heading,
               marginBottom: "1rem",
             }}
           >
             Terms of Use
           </h2>
-          <div style={{ fontSize: "0.9375rem", color: "#444444", lineHeight: 1.8 }}>
+          <div style={{ fontSize: "0.9375rem", color: muted, lineHeight: 1.8 }}>
             <p style={{ marginBottom: "1rem" }}>
               By accessing or using OrixLink AI, you agree to be bound by these
               Terms of Use. If you do not agree, you must not use the service.
@@ -142,30 +140,27 @@ export default function LegalPage() {
           </div>
         </section>
 
-        <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "0 0 3rem" }} />
+        <hr style={rule} />
 
-        {/* ── Privacy Policy ──────────────────────────────────────── */}
         <section style={{ marginBottom: "3rem" }}>
           <h2
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: "#0f0f0f",
+              color: heading,
               marginBottom: "1rem",
             }}
           >
             Privacy Policy
           </h2>
-          <div style={{ fontSize: "0.9375rem", color: "#444444", lineHeight: 1.8 }}>
+          <div style={{ fontSize: "0.9375rem", color: muted, lineHeight: 1.8 }}>
             <p style={{ marginBottom: "1rem" }}>
               Your privacy matters. This policy describes how Hannah Kraulik
               Pagade, operating as Rohimaya Health AI, handles information when
               you use OrixLink AI.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              <strong style={{ color: "#0f0f0f" }}>
-                Information we collect:
-              </strong>{" "}
+              <strong style={{ color: heading }}>Information we collect:</strong>{" "}
               OrixLink AI does not require an account or login. We do not
               collect personally identifiable information unless you voluntarily
               provide it in the conversation. Conversations are processed by a
@@ -173,19 +168,19 @@ export default function LegalPage() {
               handling policies.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              <strong style={{ color: "#0f0f0f" }}>Analytics:</strong> We use
+              <strong style={{ color: heading }}>Analytics:</strong> We use
               Vercel Analytics to collect anonymous usage data such as page
               views and device type. This data does not identify individual
               users.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              <strong style={{ color: "#0f0f0f" }}>Local storage:</strong> We
+              <strong style={{ color: heading }}>Local storage:</strong> We
               store a single preference in your browser&apos;s local storage to
               remember that you have acknowledged the medical disclaimer. No
               health data is stored locally.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              <strong style={{ color: "#0f0f0f" }}>Data sharing:</strong> We do
+              <strong style={{ color: heading }}>Data sharing:</strong> We do
               not sell, rent, or share your information with third parties for
               marketing purposes. Conversation data may be processed by our AI
               provider to generate responses.
@@ -194,7 +189,7 @@ export default function LegalPage() {
               If you have questions about this privacy policy, contact us at{" "}
               <a
                 href="mailto:legal@rohimaya.ai"
-                style={{ color: "#0f0f0f", textDecoration: "underline" }}
+                style={{ color: "var(--gold)", textDecoration: "underline" }}
               >
                 legal@rohimaya.ai
               </a>
@@ -203,19 +198,20 @@ export default function LegalPage() {
           </div>
         </section>
 
-        <hr style={{ border: "none", borderTop: "1px solid #e5e5e5", margin: "0 0 2rem" }} />
+        <hr style={{ ...rule, margin: "0 0 2rem" }} />
 
         <p
           style={{
             fontSize: "0.8125rem",
-            color: "#999999",
+            color: muted,
             lineHeight: 1.7,
+            fontFamily: "var(--font-mono)",
           }}
         >
           &copy; 2026 Hannah Kraulik Pagade, operating as Rohimaya Health AI.
           All rights reserved.
         </p>
       </div>
-    </main>
+    </AppShell>
   );
 }

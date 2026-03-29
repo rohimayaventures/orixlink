@@ -3,6 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AppShell from "@/components/AppShell";
 
 type Props = {
   user: User;
@@ -66,32 +67,29 @@ export default function AccountClient({
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "var(--cream)",
-        padding: "100px 24px 80px",
-      }}
-    >
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+    <AppShell contentTopPadding={96}>
+      <div className="px-5 sm:px-8 pb-16" style={{ maxWidth: 560, margin: "0 auto" }}>
+        <p
+          className="font-mono text-[0.6875rem] tracking-[0.14em] uppercase mb-2"
+          style={{ color: "var(--gold-muted)" }}
+        >
+          Your profile
+        </p>
         <h1
           className="font-display"
           style={{
             fontSize: "2rem",
-            color: "var(--text-on-light)",
+            color: "var(--text-on-dark)",
             marginBottom: "0.5rem",
           }}
         >
           Account
         </h1>
-        <p style={{ color: "var(--text-muted-light)", marginBottom: "2rem" }}>
+        <p style={{ color: "var(--text-muted-dark)", marginBottom: "2rem" }}>
           {profile?.full_name || "—"} · {user.email}
         </p>
 
-        <div
-          className="card-clinical"
-          style={{ padding: "24px", marginBottom: 16 }}
-        >
+        <div className="card-dark" style={{ padding: "24px", marginBottom: 16 }}>
           <p
             style={{
               fontSize: "0.6875rem",
@@ -108,22 +106,19 @@ export default function AccountClient({
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: "var(--text-on-light)",
+              color: "var(--text-on-dark)",
               textTransform: "capitalize",
             }}
           >
             {tier}
             {subscription?.is_lifetime ? " · Lifetime" : ""}
           </p>
-          <p style={{ fontSize: "0.875rem", color: "var(--text-muted-light)" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
             Status: {subscription?.status ?? "—"}
           </p>
         </div>
 
-        <div
-          className="card-clinical"
-          style={{ padding: "24px", marginBottom: 16 }}
-        >
+        <div className="card-dark" style={{ padding: "24px", marginBottom: 16 }}>
           <p
             style={{
               fontSize: "0.6875rem",
@@ -140,20 +135,17 @@ export default function AccountClient({
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: "var(--text-on-light)",
+              color: "var(--text-on-dark)",
             }}
           >
             {used} / {cap} used
           </p>
-          <p style={{ fontSize: "0.875rem", color: "var(--text-muted-light)" }}>
+          <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
             Next period starts {nextMonth}
           </p>
         </div>
 
-        <div
-          className="card-clinical"
-          style={{ padding: "24px", marginBottom: 24 }}
-        >
+        <div className="card-dark" style={{ padding: "24px", marginBottom: 24 }}>
           <p
             style={{
               fontSize: "0.6875rem",
@@ -170,7 +162,7 @@ export default function AccountClient({
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: "var(--text-on-light)",
+              color: "var(--text-on-dark)",
             }}
           >
             {creditSum}
@@ -198,6 +190,6 @@ export default function AccountClient({
           Sign out
         </button>
       </div>
-    </main>
+    </AppShell>
   );
 }

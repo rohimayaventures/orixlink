@@ -90,13 +90,41 @@ export default function LandingPage() {
             and tells you exactly what to do next — any symptom, any person, no diagnosis required.
           </p>
 
-          <div className="animate-fade-up delay-300" style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 12, marginTop: "2.75rem" }}>
-            <Link href="/assessment" style={{ display: "inline-block" }}>
-              <button className="btn-gold animate-pulse-gold" style={{ minWidth: 240, fontSize: "0.875rem" }}>
-                Begin Assessment
-                <ArrowRightIcon style={{ width: 16, height: 16 }} />
-              </button>
-            </Link>
+          <div className="animate-fade-up delay-300" style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, marginTop: "2.75rem" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+              }}
+            >
+              <Link href="/assessment" style={{ display: "inline-block" }}>
+                <button className="btn-gold animate-pulse-gold" style={{ minWidth: 220, fontSize: "0.875rem" }}>
+                  Begin Assessment
+                  <ArrowRightIcon style={{ width: 16, height: 16 }} />
+                </button>
+              </Link>
+              <Link href="/auth/signup" style={{ display: "inline-block" }}>
+                <button
+                  type="button"
+                  className="btn-ghost-gold"
+                  style={{
+                    minWidth: 220,
+                    padding: "14px 28px",
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                    borderWidth: "1.5px",
+                    borderColor: "var(--gold)",
+                  }}
+                >
+                  Sign Up
+                </button>
+              </Link>
+            </div>
             <span style={{ fontSize: "0.8rem", color: "var(--text-muted-dark)", fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
               Free to start · Save your history · Sign up in seconds
             </span>
@@ -247,21 +275,53 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer style={{
-        borderTop: "1px solid var(--obsidian-muted)", padding: "28px 24px",
-        display: "flex", flexWrap: "wrap" as const, alignItems: "center", justifyContent: "space-between", gap: 12,
-        background: "var(--obsidian)",
-      }}>
-        <span className="font-display" style={{ color: "var(--text-muted-dark)", fontSize: "0.875rem" }}>
-          OrixLink AI · <span style={{ color: "var(--gold-muted)" }}>Rohimaya Health AI</span>
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <Link
-            href="/legal"
-            style={{ fontSize: "0.75rem", color: "var(--gold-muted)", textDecoration: "none", fontFamily: "var(--font-mono)" }}
-          >
-            Legal
-          </Link>
+      <footer
+        style={{
+          borderTop: "1px solid var(--obsidian-muted)",
+          padding: "28px 24px 32px",
+          background: "var(--obsidian)",
+        }}
+      >
+        <div
+          className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-5 items-center justify-center mb-4"
+        >
+          {[
+            ["Home", "/"],
+            ["Pricing", "/pricing"],
+            ["Assessment", "/assessment"],
+            ["Sign up", "/auth/signup"],
+            ["Legal", "/legal"],
+            ["Dashboard", "/dashboard"],
+            ["History", "/history"],
+            ["Account", "/account"],
+          ].map(([label, href]) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--gold-muted)",
+                textDecoration: "none",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap" as const,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            textAlign: "center" as const,
+          }}
+        >
+          <span className="font-display" style={{ color: "var(--text-muted-dark)", fontSize: "0.875rem" }}>
+            OrixLink AI · <span style={{ color: "var(--gold-muted)" }}>Rohimaya Health AI</span>
+          </span>
           <span style={{ fontSize: "0.75rem", color: "var(--text-muted-dark)", fontFamily: "var(--font-mono)" }}>
             For informational use only. Not a substitute for professional medical advice.
           </span>
