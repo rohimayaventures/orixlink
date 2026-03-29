@@ -158,7 +158,7 @@ export default function LegalPage() {
               any information provided.
             </p>
             <p style={{ marginBottom: "1rem" }}>
-              To the fullest extent permitted by law, Hannah Kraulik Pagade, operating
+              To the fullest extent permitted by law, Hannah Kraulik, operating
               as Rohimaya Health AI, shall not be liable for any direct, indirect,
               incidental, consequential, or punitive damages arising from your use of
               OrixLink AI.

@@ -39,7 +39,7 @@ OrixLink addresses both. Any symptom. Any person. No prior diagnosis required.
 
 ### The proof point
 
-In March 2026, OrixLink was used in a real clinical scenario: Prasad Pagade, 38, seven days post radial artery cardiac catheterization with stent placement, presenting with forearm swelling, a hard and tight forearm to palpation, pain that had returned after initial improvement, pain waking him from sleep, and progressive grip weakness.
+In March 2026, OrixLink was used in a real clinical scenario: my spouse, 38, seven days post radial artery cardiac catheterization with stent placement, presenting with forearm swelling, a hard and tight forearm to palpation, pain that had returned after initial improvement, pain waking him from sleep, and progressive grip weakness.
 
 OrixLink flagged the symptom cluster as a red-flag emergency presentation consistent with compartment syndrome. It returned a structured differential ranking hematoma, pseudoaneurysm, radial artery occlusion, and compartment syndrome in order of likelihood. It identified four present red flag criteria and recommended: go to the emergency room now, bring this assessment, ask for compartment pressure measurement.
 
@@ -326,7 +326,7 @@ This distinction determines what the product can claim, what it cannot claim, an
 
 ### Clinical credibility statement
 
-The urgency tier system mirrors the reasoning a triage nurse applies in the first 90 seconds of an encounter -- because I am a triage nurse and I built it that way. Tier 1 is monitor at home. Tier 2 is contact your provider today. Tier 3 is urgent care now. Tier 4 is emergency department now. The thresholds encode 15 years of pattern recognition across acute care, post-acute, rehabilitation, and senior living. When OrixLink flagged Prasad's compartment syndrome presentation as a Tier 4 emergency, it was not because of a rule. It was because the symptom pattern -- post-procedural, progressive, waking from sleep, grip weakness -- matched the mental model of a nurse who has seen what happens when that pattern is missed.
+The urgency tier system mirrors the reasoning a triage nurse applies in the first 90 seconds of an encounter -- because I am a triage nurse and I built it that way. Tier 1 is monitor at home. Tier 2 is contact your provider today. Tier 3 is urgent care now. Tier 4 is emergency department now. The thresholds encode 15 years of pattern recognition across acute care, post-acute, rehabilitation, and senior living. When OrixLink flagged my spouse's compartment syndrome presentation as a Tier 4 emergency, it was not because of a rule. It was because the symptom pattern -- post-procedural, progressive, waking from sleep, grip weakness -- matched the mental model of a nurse who has seen what happens when that pattern is missed.
 
 ### One honest line for interviews
 

@@ -1,5 +1,5 @@
 # FinanceLens AI — Portfolio Case Study
-# Hannah Kraulik Pagade
+# Hannah Kraulik Pagade | Rohimaya Health AI
 # hannahkraulikpagade.com
 
 **Live product:** https://financelens-ai.vercel.app
