@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { usageCapFromSubscriptionRow } from "@/lib/admin/tierCaps";
-import { ensureUsageTrackingForMonth } from "@/lib/ensureUsageTracking";
+import { useSubscriptionUsage } from "@/components/SubscriptionUsageProvider";
+import { isNearCap } from "@/lib/usageNearCap";
 
 type Variant = "dark" | "light";
 
@@ -20,59 +20,25 @@ export default function HeaderAuth({
 }) {
   const { user, loading, openAuthModal } = useAuth();
   const router = useRouter();
-  const [usage, setUsage] = useState<{
-    used: number;
-    cap: number;
-    tier: string;
-  } | null>(null);
-  const [usageLoading, setUsageLoading] = useState(false);
+  const usage = useSubscriptionUsage();
   const [isAdmin, setIsAdmin] = useState(false);
 
   const isDark = variant === "dark";
 
   useEffect(() => {
     if (!user) {
-      setUsage(null);
-      setUsageLoading(false);
       setIsAdmin(false);
       return;
     }
     let cancelled = false;
-    setUsageLoading(true);
     const supabase = createClient();
-    const ym = new Date().toISOString().slice(0, 7);
-    (async () => {
-      try {
-        const [subRes, profRes] = await Promise.all([
-          supabase
-            .from("subscriptions")
-            .select("tier, is_lifetime, assessments_cap")
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase
-            .from("profiles")
-            .select("is_admin")
-            .eq("id", user.id)
-            .maybeSingle(),
-        ]);
-        if (cancelled) return;
-        const tier = (subRes.data?.tier as string) || "free";
-        const usageRow = await ensureUsageTrackingForMonth(
-          supabase,
-          user.id,
-          ym,
-          subRes.data
-        );
-        if (cancelled) return;
-        const used = usageRow?.assessments_used ?? 0;
-        const cap =
-          usageRow?.assessments_cap ??
-          usageCapFromSubscriptionRow(subRes.data);
-        setUsage({ used, cap, tier });
-        setIsAdmin(Boolean(profRes.data?.is_admin));
-      } finally {
-        if (!cancelled) setUsageLoading(false);
-      }
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!cancelled) setIsAdmin(Boolean(data?.is_admin));
     })();
     return () => {
       cancelled = true;
@@ -153,13 +119,52 @@ export default function HeaderAuth({
     );
   }
 
-  const remaining =
-    !usageLoading && usage ? Math.max(0, usage.cap - usage.used) : null;
+  const remaining = usage.loading ? null : usage.remaining;
+  const exhausted = remaining !== null && remaining <= 0;
+  const near =
+    remaining !== null &&
+    remaining > 0 &&
+    isNearCap(remaining, usage.tier, usage.isLifetime);
+
   let usageColor = isDark ? cream : "var(--text-muted-light)";
-  if (remaining !== null && usage) {
-    if (usage.tier === "pro" && remaining <= 30) usageColor = gold;
-    if (usage.tier === "free" && remaining <= 1) usageColor = "#C0392B";
+  if (exhausted) {
+    usageColor = "rgba(220,50,50,0.8)";
+  } else if (near) {
+    usageColor = "#C8A96E";
+  } else if (usage.tier === "free" && remaining !== null && remaining <= 1) {
+    usageColor = "#C0392B";
   }
+
+  const chipStyle: CSSProperties = exhausted
+    ? {
+        background: "rgba(220,50,50,0.1)",
+        border: "1px solid rgba(220,50,50,0.3)",
+        color: usageColor,
+        borderRadius: 999,
+        padding: "4px 10px",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+      }
+    : near
+      ? {
+          background: "rgba(200,169,110,0.15)",
+          border: "1px solid rgba(200,169,110,0.4)",
+          color: usageColor,
+          borderRadius: 999,
+          padding: "4px 10px",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }
+      : {
+          color: usageColor,
+          borderRadius: 999,
+          padding: "2px 0",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        };
 
   const initials =
     user.email?.slice(0, 2).toUpperCase() ||
@@ -183,7 +188,7 @@ export default function HeaderAuth({
           Pricing
         </Link>
       )}
-      {usageLoading ? (
+      {usage.loading ? (
         <span className="header-usage-skeleton" aria-hidden />
       ) : remaining !== null ? (
         <span
@@ -191,10 +196,22 @@ export default function HeaderAuth({
           style={{
             fontFamily: "var(--font-mono)",
             letterSpacing: "0.04em",
-            color: usageColor,
             fontSize: "0.6875rem",
+            ...chipStyle,
           }}
         >
+          {near ? (
+            <span
+              aria-hidden
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: gold,
+                flexShrink: 0,
+              }}
+            />
+          ) : null}
           <span className="sm:hidden">{remaining} left</span>
           <span className="hidden sm:inline" style={{ fontSize: "0.75rem" }}>
             {remaining} assessments left

@@ -3,6 +3,7 @@ import { Cormorant_Garamond, DM_Sans, DM_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import LegalOverlay from "@/components/LegalOverlay";
 import { AuthProvider } from "@/components/AuthProvider";
+import { SubscriptionUsageProvider } from "@/components/SubscriptionUsageProvider";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -91,8 +92,10 @@ export default function RootLayout({
         className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable} antialiased`}
       >
         <AuthProvider>
-          <LegalOverlay />
-          {children}
+          <SubscriptionUsageProvider>
+            <LegalOverlay />
+            {children}
+          </SubscriptionUsageProvider>
         </AuthProvider>
         <Analytics />
         <script

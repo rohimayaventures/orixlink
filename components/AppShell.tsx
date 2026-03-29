@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import HeaderAuth from "@/components/HeaderAuth";
+import { BuyMorePrompt } from "@/components/BuyMorePrompt";
+import { useAuth } from "@/components/AuthProvider";
+import { useSubscriptionUsage } from "@/components/SubscriptionUsageProvider";
+import { shouldShowBuyMoreBanner } from "@/lib/usageNearCap";
 
 const navLinkStyle = {
   fontSize: "0.8125rem",
@@ -30,6 +34,15 @@ export default function AppShell({
   contentTopPadding = 88,
   showFooter = true,
 }: Props) {
+  const { user } = useAuth();
+  const usage = useSubscriptionUsage();
+  const showBuyMore =
+    Boolean(user) &&
+    !usage.loading &&
+    !usage.isLifetime &&
+    (usage.tier === "pro" || usage.tier === "family") &&
+    shouldShowBuyMoreBanner(usage.remaining, usage.tier, usage.isLifetime);
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -101,6 +114,13 @@ export default function AppShell({
       </nav>
 
       <div className="flex-1 w-full" style={{ paddingTop: contentTopPadding }}>
+        {showBuyMore ? (
+          <BuyMorePrompt
+            remaining={usage.remaining}
+            tier={usage.tier as "pro" | "family"}
+            resetDate={usage.resetDate}
+          />
+        ) : null}
         {children}
       </div>
 

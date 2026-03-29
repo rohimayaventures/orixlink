@@ -387,7 +387,8 @@ export default function PricingPage() {
               Assessment credit packs
             </p>
             <h2
-              className="font-display text-3xl md:text-4xl text-center mb-4"
+              id="credit-packs"
+              className="font-display text-3xl md:text-4xl text-center mb-4 scroll-mt-24"
               style={{ color: ON_DARK }}
             >
               Need more assessments?
