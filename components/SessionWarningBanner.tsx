@@ -42,7 +42,10 @@ export function SessionWarningBanner() {
       </span>
       <button
         type="button"
-        onClick={() => setVisible(false)}
+        onClick={() => {
+          setVisible(false);
+          window.dispatchEvent(new CustomEvent("session-reset"));
+        }}
         style={{
           backgroundColor: "#C8A96E",
           color: "#080C14",
@@ -55,7 +58,7 @@ export function SessionWarningBanner() {
           fontFamily: "var(--font-body), DM Sans, sans-serif",
         }}
       >
-        Stay signed in
+        Keep me signed in
       </button>
     </div>
   );

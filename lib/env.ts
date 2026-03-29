@@ -9,9 +9,24 @@ const required = [
   "CRON_SECRET",
   "RESEND_API_KEY",
   "RESEND_FROM_EMAIL",
+  "STRIPE_PRICE_PRO_MONTHLY",
+  "STRIPE_PRICE_PRO_ANNUAL",
+  "STRIPE_PRICE_FAMILY_MONTHLY",
+  "STRIPE_PRICE_FAMILY_ANNUAL",
+  "STRIPE_PRICE_LIFETIME",
+  "STRIPE_PRICE_CREDITS_STARTER",
+  "STRIPE_PRICE_CREDITS_STANDARD",
+  "STRIPE_PRICE_CREDITS_VALUE",
+  "STRIPE_PRICE_CREDITS_POWER",
 ];
 
-const optional = ["LOOPS_API_KEY", "NEXT_PUBLIC_APP_URL"];
+const optional = [
+  "LOOPS_API_KEY",
+  "NEXT_PUBLIC_APP_URL",
+  "STRIPE_PRICE_CLINICAL_MONTHLY",
+  "STRIPE_PRICE_CLINICAL_ANNUAL",
+  "STRIPE_PRICE_CREDITS_CLINIC_BOOST",
+];
 
 export function validateEnv() {
   const missing = required.filter((key) => !process.env[key]);
@@ -47,4 +62,13 @@ export const env = {
   resendFromEmail: process.env.RESEND_FROM_EMAIL!,
   loopsApiKey: process.env.LOOPS_API_KEY,
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "https://triage.rohimaya.ai",
+  stripePriceProMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY!,
+  stripePriceProAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL!,
+  stripePriceFamilyMonthly: process.env.STRIPE_PRICE_FAMILY_MONTHLY!,
+  stripePriceFamilyAnnual: process.env.STRIPE_PRICE_FAMILY_ANNUAL!,
+  stripePriceLifetime: process.env.STRIPE_PRICE_LIFETIME!,
+  stripePriceCreditsStarter: process.env.STRIPE_PRICE_CREDITS_STARTER!,
+  stripePriceCreditsStandard: process.env.STRIPE_PRICE_CREDITS_STANDARD!,
+  stripePriceCreditsValue: process.env.STRIPE_PRICE_CREDITS_VALUE!,
+  stripePriceCreditsPower: process.env.STRIPE_PRICE_CREDITS_POWER!,
 };

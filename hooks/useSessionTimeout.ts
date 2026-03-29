@@ -66,12 +66,17 @@ export function useSessionTimeout(isAuthenticated: boolean) {
     events.forEach((e) =>
       window.addEventListener(e, resetTimers, opts)
     );
+
+    const handleManualReset = () => resetTimers();
+    window.addEventListener("session-reset", handleManualReset);
+
     resetTimers();
 
     return () => {
       events.forEach((e) =>
         window.removeEventListener(e, resetTimers)
       );
+      window.removeEventListener("session-reset", handleManualReset);
       window.clearTimeout(timeoutRef.current);
       window.clearTimeout(warningRef.current);
     };

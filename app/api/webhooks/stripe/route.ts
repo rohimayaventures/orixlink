@@ -77,6 +77,14 @@ async function addCredits(
     })
 
   if (error) {
+    if (error.code === '23505') {
+      console.log(
+        'Credits already added for payment intent:',
+        stripePaymentIntentId,
+        '-- skipping duplicate'
+      )
+      return
+    }
     console.error('Failed to insert credits:', error)
     throw error
   }
@@ -122,7 +130,18 @@ export async function POST(request: NextRequest) {
         const creditsAmount = session.metadata?.credits_amount
         const isLifetime = session.metadata?.is_lifetime === 'true'
 
-        if (!userId) break
+        if (!userId) {
+          console.error(
+            'Missing user_id in webhook metadata',
+            'event type:',
+            event.type,
+            'event id:',
+            event.id,
+            'customer:',
+            session.customer ?? 'unknown'
+          )
+          break
+        }
 
         if (creditsAmount) {
           const packName =
@@ -134,9 +153,23 @@ export async function POST(request: NextRequest) {
               : pi && typeof pi === 'object' && 'id' in pi
                 ? (pi as Stripe.PaymentIntent).id
                 : undefined
+          const parsedCredits = creditsAmount
+            ? parseInt(creditsAmount, 10)
+            : NaN
+
+          if (isNaN(parsedCredits) || parsedCredits <= 0) {
+            console.error(
+              'Invalid credits_amount in webhook metadata:',
+              creditsAmount,
+              'event:',
+              event.id
+            )
+            break
+          }
+
           await addCredits(
             userId,
-            parseInt(creditsAmount, 10),
+            parsedCredits,
             paymentIntentId,
             packName ?? undefined
           )
@@ -165,7 +198,30 @@ export async function POST(request: NextRequest) {
         const userId = sub.metadata?.user_id
         const priceKey = sub.metadata?.price_key
 
-        if (!userId || !priceKey) break
+        if (!userId) {
+          console.error(
+            'Missing user_id in webhook metadata',
+            'event type:',
+            event.type,
+            'event id:',
+            event.id,
+            'customer:',
+            sub.customer ?? 'unknown'
+          )
+          break
+        }
+        if (!priceKey) {
+          console.error(
+            'Missing price_key in webhook metadata',
+            'event type:',
+            event.type,
+            'event id:',
+            event.id,
+            'userId:',
+            userId
+          )
+          break
+        }
 
         const { tier, cap } = getTierFromPriceKey(priceKey)
 
@@ -191,7 +247,18 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.user_id
-        if (!userId) break
+        if (!userId) {
+          console.error(
+            'Missing user_id in webhook metadata',
+            'event type:',
+            event.type,
+            'event id:',
+            event.id,
+            'customer:',
+            sub.customer ?? 'unknown'
+          )
+          break
+        }
 
         await upsertSubscription(userId, {
           tier: 'free',
