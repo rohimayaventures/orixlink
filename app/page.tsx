@@ -354,7 +354,7 @@ function LandingPageInner() {
             <span style={{ color: "var(--gold)" }}>Let&apos;s find out what.</span>
           </h2>
           <p style={{ fontSize: "1rem", color: "var(--text-muted-dark)", marginBottom: "2.5rem", fontWeight: 300, lineHeight: 1.65 }}>
-            Free. No account. No waiting. Just answers.
+            First assessment free before signup. No waiting. Just answers.
           </p>
           <Link href="/assessment" style={{ display: "inline-block" }}>
             <button className="btn-gold" style={{ minWidth: 240, fontSize: "0.875rem" }}>

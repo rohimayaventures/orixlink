@@ -291,9 +291,9 @@ export default function LegalPage() {
             <Subheading>How we use your information</Subheading>
             <p style={{ marginBottom: "1rem" }}>
               We use your assessment data solely to provide the OrixLink AI service
-              &mdash; including saving your history, generating PDF exports, and
-              powering follow-up reminders. We do not use your health assessment data
-              to train AI models.
+              &mdash; including saving your history and generating PDF exports.
+              Follow-up reminders are coming soon. We do not use your health assessment
+              data to train AI models.
             </p>
             <p style={{ marginBottom: "1rem" }}>
               Assessment content is processed by Anthropic (Claude API) to generate

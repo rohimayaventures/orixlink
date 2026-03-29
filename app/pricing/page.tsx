@@ -182,7 +182,7 @@ export default function PricingPage() {
               <FeatureLine ok>All 12 languages</FeatureLine>
               <FeatureLine ok={false}>Symptom history</FeatureLine>
               <FeatureLine ok={false}>PDF export</FeatureLine>
-              <FeatureLine ok={false}>Follow-up reminders</FeatureLine>
+              <FeatureLine ok={false}>Follow-up reminders (coming soon)</FeatureLine>
               <FeatureLine ok={false}>Offline PWA</FeatureLine>
             </ul>
             <Link
@@ -242,7 +242,7 @@ export default function PricingPage() {
               <FeatureLine ok>Sonnet model (deep analysis)</FeatureLine>
               <FeatureLine ok>Full symptom history timeline</FeatureLine>
               <FeatureLine ok>Appointment prep PDF export</FeatureLine>
-              <FeatureLine ok>Follow-up reminders (24/48/72h)</FeatureLine>
+              <FeatureLine ok={false}>Follow-up reminders (coming soon)</FeatureLine>
               <FeatureLine ok>Offline PWA</FeatureLine>
               <FeatureLine ok>Dependent profiles (up to 2)</FeatureLine>
               <FeatureLine ok>Credit packs available</FeatureLine>
@@ -303,7 +303,7 @@ export default function PricingPage() {
               <FeatureLine ok>10 assessments / day per member</FeatureLine>
               <FeatureLine ok>Separate history per profile</FeatureLine>
               <FeatureLine ok>Family usage dashboard</FeatureLine>
-              <FeatureLine ok>Per-member reminders</FeatureLine>
+              <FeatureLine ok={false}>Per-member reminders (coming soon)</FeatureLine>
               <FeatureLine ok={false}>Provider dashboard</FeatureLine>
               <FeatureLine ok={false}>Clinical seats</FeatureLine>
             </ul>
