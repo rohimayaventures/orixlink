@@ -75,10 +75,6 @@ create index idx_sessions_created on public.sessions(created_at desc);
 
 alter table public.sessions enable row level security;
 
-create policy "Anon users can create sessions"
-  on public.sessions for insert
-  with check (true);
-
 create policy "Users can read own sessions"
   on public.sessions for select
   using (user_id is null or auth.uid() = user_id);
@@ -117,10 +113,6 @@ create table public.messages (
 create index idx_messages_session on public.messages(session_id, created_at);
 
 alter table public.messages enable row level security;
-
-create policy "Anon users can insert messages"
-  on public.messages for insert
-  with check (true);
 
 create policy "Users can read messages for accessible sessions"
   on public.messages for select

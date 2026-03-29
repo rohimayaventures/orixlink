@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import HeaderAuth from "@/components/HeaderAuth";
 import {
   ActivityLogIcon,
   LockClosedIcon,
@@ -38,6 +39,7 @@ export default function LandingPage() {
             OrixLink <span style={{ color: "var(--gold)" }}>AI</span>
           </span>
         </div>
+        <HeaderAuth variant="dark" />
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}

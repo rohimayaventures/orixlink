@@ -1,7 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/AuthProvider'
+import HeaderAuth from '@/components/HeaderAuth'
+import CapReachedPrompt, {
+  type CapReachedPayload,
+} from '@/components/CapReachedPrompt'
+import {
+  hasUsedAnonAssessment,
+  markAnonAssessmentUsed,
+} from '@/lib/anonSession'
 import {
   ActivityLogIcon,
   ArrowRightIcon,
@@ -9,6 +18,13 @@ import {
   Cross2Icon,
   PersonIcon,
 } from '@radix-ui/react-icons'
+import {
+  LANGUAGES,
+  TIER_COPY,
+  DEFAULT_LANGUAGE_CODE,
+  getClinicalTier,
+  LANGUAGE_PROMPT_NAMES,
+} from '@/lib/outputLanguages'
 
 const ROLES = [
   { id: 'clinician', label: 'Medical Professional', desc: 'Nurse, PA, NP, MD' },
@@ -27,10 +43,9 @@ const CONTEXTS = [
   { id: 'other', label: 'Other', sub: 'Something else entirely' },
 ]
 
-const LANGUAGES = ['English', 'Español', '中文', 'Français', 'Português', 'العربية']
-
 export default function AssessmentPage() {
   const router = useRouter()
+  const { user, openAuthModal } = useAuth()
   const [step, setStep] = useState(1)
   const [role, setRole] = useState('')
   const [context, setContext] = useState('')
@@ -40,18 +55,30 @@ export default function AssessmentPage() {
   const [duration, setDuration] = useState('')
   const [modifiers, setModifiers] = useState('')
   const [medications, setMedications] = useState('')
-  const [language, setLanguage] = useState('English')
+  const [language, setLanguage] = useState(DEFAULT_LANGUAGE_CODE)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
+
+  useEffect(() => {
+    sessionStorage.removeItem('orixlink_session_id')
+  }, [])
 
   const canProceedStep1 = role !== ''
   const canProceedStep2 = context !== ''
   const canSubmit = symptoms.trim().length > 10 && patientAge.trim().length > 0
 
+  const anonGate = !user && hasUsedAnonAssessment()
+
+  useEffect(() => {
+    if (anonGate) openAuthModal()
+  }, [anonGate, openAuthModal])
+
   async function handleSubmit() {
     if (!canSubmit) return
     setLoading(true)
     setError('')
+    setCapPayload(null)
     const contextInfo = contextDetail ? `${context}: ${contextDetail}` : context
     const userMessage = `
 Role: ${role}
@@ -61,7 +88,7 @@ Symptoms: ${symptoms}
 ${duration ? `Duration: ${duration}` : ''}
 ${modifiers ? `Better or worse with: ${modifiers}` : ''}
 ${medications ? `Current medications: ${medications}` : ''}
-Language preference: ${language}
+Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? language})
     `.trim()
 
     try {
@@ -74,7 +101,19 @@ Language preference: ${language}
         }),
       })
       const data = await res.json()
+      if (
+        res.status === 402 &&
+        data?.error === 'cap_reached'
+      ) {
+        setCapPayload(data as CapReachedPayload)
+        setLoading(false)
+        return
+      }
       if (!res.ok) throw new Error(data.error || 'Assessment failed')
+      if (!user) markAnonAssessmentUsed()
+      if (typeof data.session_id === 'string' && data.session_id) {
+        sessionStorage.setItem('orixlink_session_id', data.session_id)
+      }
       sessionStorage.setItem('orixlink_response', data.response)
       sessionStorage.setItem('orixlink_session', JSON.stringify({
         role, context, language, patientAge, symptoms
@@ -109,6 +148,59 @@ Language preference: ${language}
     marginBottom: '0.5rem',
   }
 
+  if (anonGate) {
+    return (
+      <main style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+        <nav style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 24px',
+          borderBottom: '1px solid var(--cream-border)',
+          background: 'var(--clinical-white)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ActivityLogIcon style={{ color: 'var(--gold)', width: 20, height: 20 }} />
+            <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: 'var(--text-on-light)' }}>
+              OrixLink <span style={{ color: 'var(--gold)' }}>AI</span>
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <HeaderAuth variant="light" />
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-muted-light)', fontSize: '0.8125rem',
+                padding: '6px 10px', borderRadius: 6,
+              }}
+            >
+              <Cross2Icon style={{ width: 12, height: 12 }} />
+              Exit
+            </button>
+          </div>
+        </nav>
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: '2rem', textAlign: 'center', maxWidth: 440, margin: '0 auto',
+        }}>
+          <h1 className="font-display" style={{ fontSize: '1.75rem', marginBottom: '1rem', color: 'var(--text-on-light)' }}>
+            Sign in to run another assessment
+          </h1>
+          <p style={{ color: 'var(--text-muted-light)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+            You have used your free anonymous assessment. Sign in to save results and continue with your included assessments.
+          </p>
+          <button type="button" className="btn-gold" onClick={openAuthModal} style={{ marginBottom: 12 }}>
+            Sign in or create account
+          </button>
+          <button type="button" className="btn-ghost-gold" onClick={() => router.push('/')}>
+            Back to home
+          </button>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
 
@@ -131,18 +223,22 @@ Language preference: ${language}
             OrixLink <span style={{ color: 'var(--gold)' }}>AI</span>
           </span>
         </div>
-        <button
-          onClick={() => router.push('/')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-muted-light)', fontSize: '0.8125rem',
-            padding: '6px 10px', borderRadius: 6,
-          }}
-        >
-          <Cross2Icon style={{ width: 12, height: 12 }} />
-          Exit
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <HeaderAuth variant="light" />
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted-light)', fontSize: '0.8125rem',
+              padding: '6px 10px', borderRadius: 6,
+            }}
+          >
+            <Cross2Icon style={{ width: 12, height: 12 }} />
+            Exit
+          </button>
+        </div>
       </nav>
 
       {/* ── Gold progress bar ── */}
@@ -217,28 +313,47 @@ Language preference: ${language}
                 ))}
               </div>
 
-              {(role === 'patient' || role === 'family') && (
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={labelStyle}>Output Language</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {LANGUAGES.map((lang) => (
-                      <button
-                        key={lang}
-                        onClick={() => setLanguage(lang)}
-                        style={{
-                          padding: '7px 14px', borderRadius: 6, fontSize: '0.875rem',
-                          border: `1.5px solid ${language === lang ? 'var(--gold)' : 'var(--cream-border)'}`,
-                          background: language === lang ? 'var(--gold-dim)' : 'var(--clinical-white)',
-                          color: language === lang ? 'var(--gold)' : 'var(--text-muted-light)',
-                          cursor: 'pointer', transition: 'all 0.2s',
-                        }}
-                      >
-                        {lang}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="orixlink-output-language" style={labelStyle}>
+                  Response language ({LANGUAGES.length} languages)
+                </label>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted-light)', marginBottom: '0.5rem', fontWeight: 300, lineHeight: 1.5 }}>
+                  Same list for every role — patient, family or caregiver, or medical professional. OrixLink writes the assessment in the language you pick (clinical depth and terminology still follow the role you selected). App screens stay in English. Some languages show an extra accuracy notice; emergency-level results also show a fixed English line when the response language is moderate or low confidence.
+                </p>
+                <select
+                  id="orixlink-output-language"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    cursor: 'pointer',
+                    appearance: 'auto',
+                    WebkitAppearance: 'menulist',
+                  }}
+                >
+                  {LANGUAGES.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                {getClinicalTier(language) === 'moderate' && (
+                  <p style={{
+                    marginTop: '0.75rem', fontSize: '0.8125rem', lineHeight: 1.55, color: '#D4882A',
+                    padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(212,136,42,0.35)', background: 'rgba(212,136,42,0.08)',
+                  }}>
+                    {TIER_COPY.moderate}
+                  </p>
+                )}
+                {getClinicalTier(language) === 'low' && (
+                  <p style={{
+                    marginTop: '0.75rem', fontSize: '0.8125rem', lineHeight: 1.55, color: '#C0392B',
+                    padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(192,57,43,0.35)', background: 'rgba(192,57,43,0.08)',
+                  }}>
+                    {TIER_COPY.low}
+                  </p>
+                )}
+              </div>
 
               <button
                 onClick={() => setStep(2)}
@@ -411,6 +526,13 @@ Language preference: ${language}
               <div className="urgency-critical" style={{ padding: '12px 16px', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5, marginBottom: '1.5rem' }}>
                 <strong>Life-threatening emergency?</strong> Chest pain, difficulty breathing, stroke symptoms — call 911 immediately.
               </div>
+
+              {capPayload && (
+                <CapReachedPrompt
+                  payload={capPayload}
+                  onDismiss={() => setCapPayload(null)}
+                />
+              )}
 
               {error && (
                 <div style={{ background: 'var(--urgent-critical-bg)', border: '1px solid var(--urgent-critical)', color: 'var(--urgent-critical)', padding: '12px 16px', borderRadius: 8, fontSize: '0.875rem', marginBottom: '1rem' }}>

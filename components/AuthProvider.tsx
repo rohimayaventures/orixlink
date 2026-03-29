@@ -1,0 +1,131 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { User, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+import {
+  clearAnonSessionData,
+  getAnonSessionData,
+} from "@/lib/anonSession";
+import AuthModal from "@/components/AuthModal";
+
+type AuthCtx = {
+  user: User | null;
+  loading: boolean;
+  supabase: SupabaseClient | null;
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
+  authModalOpen: boolean;
+  refreshUser: () => Promise<void>;
+};
+
+const Ctx = createContext<AuthCtx | null>(null);
+
+export function useAuth() {
+  const v = useContext(Ctx);
+  if (!v) throw new Error("useAuth must be used within AuthProvider");
+  return v;
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    const client = createClient();
+    setSupabase(client);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (!supabase) return;
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user ?? null);
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    refreshUser().finally(() => setLoading(false));
+  }, [supabase, refreshUser]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (event !== "SIGNED_IN" || !session?.user) return;
+
+      const last = getAnonSessionData();
+      if (last) {
+        try {
+          const res = await fetch("/api/migrate-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionData: last }),
+          });
+          if (res.ok) {
+            clearAnonSessionData();
+          }
+        } catch (e) {
+          console.error("migrate-session", e);
+        }
+      }
+
+      try {
+        await fetch("/api/auth/bootstrap", { method: "POST" });
+      } catch (e) {
+        console.error("bootstrap", e);
+      }
+
+      setAuthModalOpen(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  const openAuthModal = useCallback(() => setAuthModalOpen(true), []);
+  const closeAuthModal = useCallback(() => setAuthModalOpen(false), []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      supabase,
+      openAuthModal,
+      closeAuthModal,
+      authModalOpen,
+      refreshUser,
+    }),
+    [
+      user,
+      loading,
+      supabase,
+      openAuthModal,
+      closeAuthModal,
+      authModalOpen,
+      refreshUser,
+    ]
+  );
+
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {supabase && (
+        <AuthModal
+          open={authModalOpen}
+          onClose={closeAuthModal}
+          supabaseClient={supabase}
+        />
+      )}
+    </Ctx.Provider>
+  );
+}

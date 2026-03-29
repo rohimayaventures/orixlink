@@ -31,7 +31,7 @@ OrixLink reads who is asking — patient, family member, or medical professional
 - **Red flag tracker** — per-symptom Present / Absent / Unknown, updates in real time
 - **Living conversation** — new symptoms update the full assessment dynamically
 - **Patient refusal protocol** — hours-to-harm timeline, irreversible outcome framing, 911 language
-- **Multi-language support** — English, Spanish, Mandarin, French, Portuguese, Arabic
+- **Multi-language support (12)** — Response language dropdown for all roles (patient, family, clinician): English, Spanish, French, Portuguese, Mandarin, Arabic, Hindi, Vietnamese, Tagalog, Haitian Creole, Somali, Amharic; tiered in-product notices and English emergency duplicate for moderate/low tiers when urgency is ED-now
 - **Universal intake** — 8 situation categories, no prior diagnosis required
 
 ---
