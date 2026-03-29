@@ -4,7 +4,19 @@ import { usageCapFromSubscriptionRow } from "@/lib/admin/tierCaps";
 import { ensureUsageTrackingForMonth } from "@/lib/ensureUsageTracking";
 import AccountClient from "./AccountClient";
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ credits_frozen?: string }>;
+}) {
+  const sp = await searchParams;
+  const portalCreditsFrozenHintRaw = sp.credits_frozen;
+  const parsedHint = portalCreditsFrozenHintRaw
+    ? parseInt(portalCreditsFrozenHintRaw, 10)
+    : NaN;
+  const portalCreditsFrozenHint =
+    Number.isFinite(parsedHint) && parsedHint > 0 ? parsedHint : null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +30,7 @@ export default async function AccountPage() {
     supabase.from("subscriptions").select("*").eq("user_id", user.id).maybeSingle(),
     supabase
       .from("credits")
-      .select("credits_remaining")
+      .select("credits_remaining, frozen_at")
       .eq("user_id", user.id)
       .gt("credits_remaining", 0),
   ]);
@@ -35,9 +47,17 @@ export default async function AccountPage() {
       period_month: yearMonth,
     };
 
-  const creditSum =
-    creditsRes.data?.reduce((sum, row) => sum + row.credits_remaining, 0) ??
-    0;
+  const rows = creditsRes.data ?? [];
+  const creditSum = rows.reduce(
+    (sum, row) =>
+      row.frozen_at == null ? sum + row.credits_remaining : sum,
+    0
+  );
+  const frozenCreditsSum = rows.reduce(
+    (sum, row) =>
+      row.frozen_at != null ? sum + row.credits_remaining : sum,
+    0
+  );
 
   return (
     <AccountClient
@@ -46,6 +66,8 @@ export default async function AccountPage() {
       subscription={subRes.data}
       usage={usageAligned}
       creditSum={creditSum}
+      frozenCreditsSum={frozenCreditsSum}
+      portalCreditsFrozenHint={portalCreditsFrozenHint}
     />
   );
 }

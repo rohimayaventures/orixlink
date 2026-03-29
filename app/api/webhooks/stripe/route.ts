@@ -241,6 +241,18 @@ export async function POST(request: NextRequest) {
           cancel_at_period_end: sub.cancel_at_period_end,
         })
         await upsertUsageTracking(userId, cap)
+
+        if (sub.status === 'active') {
+          const { error: unfreezeErr } = await supabaseAdmin
+            .from('credits')
+            .update({ frozen_at: null })
+            .eq('user_id', userId)
+            .not('frozen_at', 'is', null)
+            .gt('credits_remaining', 0)
+          if (unfreezeErr) {
+            console.error('credits unfreeze on subscription active:', unfreezeErr)
+          }
+        }
         break
       }
 
@@ -266,6 +278,16 @@ export async function POST(request: NextRequest) {
           cancel_at_period_end: false,
         })
         await upsertUsageTracking(userId, 5)
+
+        const { error: freezeErr } = await supabaseAdmin
+          .from('credits')
+          .update({ frozen_at: new Date().toISOString() })
+          .eq('user_id', userId)
+          .is('frozen_at', null)
+          .gt('credits_remaining', 0)
+        if (freezeErr) {
+          console.error('credits freeze on subscription deleted:', freezeErr)
+        }
         break
       }
 

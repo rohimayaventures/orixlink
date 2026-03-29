@@ -3,6 +3,7 @@
 import type { User } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import AppShell from "@/components/AppShell";
 import { SkeletonBlock } from "@/components/SkeletonBlock";
 
@@ -23,6 +24,9 @@ type Props = {
     period_month: string;
   };
   creditSum: number;
+  frozenCreditsSum: number;
+  /** Count from billing portal return_url when user had unfrozen credits before opening portal. */
+  portalCreditsFrozenHint: number | null;
 };
 
 export default function AccountClient({
@@ -31,11 +35,27 @@ export default function AccountClient({
   subscription,
   usage,
   creditSum,
+  frozenCreditsSum,
+  portalCreditsFrozenHint,
 }: Props) {
   const router = useRouter();
   const [portalLoading, setPortalLoading] = useState(false);
   const [accountUiReady, setAccountUiReady] = useState(false);
+  const [portalFrozenBannerDismissed, setPortalFrozenBannerDismissed] =
+    useState(false);
   const tier = subscription?.tier ?? "free";
+
+  const subStatusNorm = (subscription?.status ?? "").toLowerCase();
+  const showFrozenCreditsNotice =
+    (subStatusNorm === "canceled" ||
+      subStatusNorm === "cancelled" ||
+      subStatusNorm === "past_due") &&
+    frozenCreditsSum > 0;
+
+  const showPortalFrozenBanner =
+    portalCreditsFrozenHint != null &&
+    portalCreditsFrozenHint > 0 &&
+    !portalFrozenBannerDismissed;
 
   useEffect(() => {
     setAccountUiReady(true);
@@ -128,6 +148,59 @@ export default function AccountClient({
   return (
     <AppShell contentTopPadding={96}>
       <div className="px-5 sm:px-8 pb-16" style={{ maxWidth: 560, margin: "0 auto" }}>
+        {showPortalFrozenBanner && (
+          <div
+            role="status"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "12px 14px",
+              marginBottom: 16,
+              borderRadius: 10,
+              background: "rgba(200,169,110,0.08)",
+              border: "1px solid rgba(200,169,110,0.2)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontFamily: "var(--font-body), sans-serif",
+                fontSize: 13,
+                lineHeight: 1.45,
+                color: "rgba(244,239,230,0.7)",
+                flex: 1,
+              }}
+            >
+              Your {portalCreditsFrozenHint} unused credits are frozen. They will be
+              waiting when you return.
+            </p>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => {
+                setPortalFrozenBannerDismissed(true);
+                router.replace("/account");
+              }}
+              style={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 32,
+                height: 32,
+                border: "none",
+                borderRadius: 8,
+                background: "rgba(200,169,110,0.12)",
+                color: "#C8A96E",
+                cursor: "pointer",
+              }}
+            >
+              <Cross2Icon style={{ width: 16, height: 16 }} />
+            </button>
+          </div>
+        )}
         <p
           className="font-mono text-[0.6875rem] tracking-[0.14em] uppercase mb-2"
           style={{ color: "var(--gold-muted)" }}
@@ -241,6 +314,21 @@ export default function AccountClient({
           >
             {creditSum}
           </p>
+          {showFrozenCreditsNotice && (
+            <p
+              style={{
+                fontFamily: "var(--font-body), sans-serif",
+                fontSize: "12px",
+                color: "rgba(244,239,230,0.4)",
+                marginTop: "8px",
+                marginBottom: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              You have {frozenCreditsSum} frozen credits. They will restore when you
+              reactivate your subscription.
+            </p>
+          )}
         </div>
 
         {subscription?.stripe_customer_id && (
