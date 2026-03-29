@@ -18,6 +18,7 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
     cap: number;
     tier: string;
   } | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   const isDark = variant === "dark";
@@ -25,38 +26,50 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
   useEffect(() => {
     if (!user) {
       setUsage(null);
+      setUsageLoading(false);
       setIsAdmin(false);
       return;
     }
+    let cancelled = false;
+    setUsageLoading(true);
     const supabase = createClient();
     const ym = new Date().toISOString().slice(0, 7);
     (async () => {
-      const [subRes, profRes] = await Promise.all([
-        supabase
-          .from("subscriptions")
-          .select("tier, is_lifetime, assessments_cap")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", user.id)
-          .maybeSingle(),
-      ]);
-      const tier = (subRes.data?.tier as string) || "free";
-      const usageRow = await ensureUsageTrackingForMonth(
-        supabase,
-        user.id,
-        ym,
-        subRes.data
-      );
-      const used = usageRow?.assessments_used ?? 0;
-      const cap =
-        usageRow?.assessments_cap ??
-        usageCapFromSubscriptionRow(subRes.data);
-      setUsage({ used, cap, tier });
-      setIsAdmin(Boolean(profRes.data?.is_admin));
+      try {
+        const [subRes, profRes] = await Promise.all([
+          supabase
+            .from("subscriptions")
+            .select("tier, is_lifetime, assessments_cap")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", user.id)
+            .maybeSingle(),
+        ]);
+        if (cancelled) return;
+        const tier = (subRes.data?.tier as string) || "free";
+        const usageRow = await ensureUsageTrackingForMonth(
+          supabase,
+          user.id,
+          ym,
+          subRes.data
+        );
+        if (cancelled) return;
+        const used = usageRow?.assessments_used ?? 0;
+        const cap =
+          usageRow?.assessments_cap ??
+          usageCapFromSubscriptionRow(subRes.data);
+        setUsage({ used, cap, tier });
+        setIsAdmin(Boolean(profRes.data?.is_admin));
+      } finally {
+        if (!cancelled) setUsageLoading(false);
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   async function signOut() {
@@ -129,11 +142,12 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
     );
   }
 
-  const remaining = usage ? Math.max(0, usage.cap - usage.used) : null;
+  const remaining =
+    !usageLoading && usage ? Math.max(0, usage.cap - usage.used) : null;
   let usageColor = isDark ? cream : "var(--text-muted-light)";
-  if (remaining !== null) {
-    if (usage!.tier === "pro" && remaining <= 30) usageColor = gold;
-    if (usage!.tier === "free" && remaining <= 1) usageColor = "#C0392B";
+  if (remaining !== null && usage) {
+    if (usage.tier === "pro" && remaining <= 30) usageColor = gold;
+    if (usage.tier === "free" && remaining <= 1) usageColor = "#C0392B";
   }
 
   const initials =
@@ -155,7 +169,9 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
       >
         Pricing
       </Link>
-      {remaining !== null && (
+      {usageLoading ? (
+        <span className="header-usage-skeleton" aria-hidden />
+      ) : remaining !== null ? (
         <span
           style={{
             fontSize: "0.75rem",
@@ -166,7 +182,7 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
         >
           {remaining} assessments left
         </span>
-      )}
+      ) : null}
       <Link
         href="/account"
         style={{

@@ -10,7 +10,7 @@ type SubscriptionRow = {
 export type UsageMonthRow = {
   assessments_used: number;
   assessments_cap: number;
-  year_month: string;
+  period_month: string;
 };
 
 /**
@@ -19,16 +19,16 @@ export type UsageMonthRow = {
 export async function ensureUsageTrackingForMonth(
   supabase: SupabaseClient,
   userId: string,
-  yearMonth: string,
+  periodMonth: string,
   subscription: SubscriptionRow
 ): Promise<UsageMonthRow | null> {
   const expectedCap = usageCapFromSubscriptionRow(subscription);
 
   const { data: existing } = await supabase
     .from("usage_tracking")
-    .select("assessments_used, assessments_cap, year_month")
+    .select("assessments_used, assessments_cap, period_month")
     .eq("user_id", userId)
-    .eq("year_month", yearMonth)
+    .eq("period_month", periodMonth)
     .maybeSingle();
 
   if (!existing) {
@@ -36,26 +36,26 @@ export async function ensureUsageTrackingForMonth(
       .from("usage_tracking")
       .insert({
         user_id: userId,
-        year_month: yearMonth,
+        period_month: periodMonth,
         assessments_used: 0,
         assessments_cap: expectedCap,
       })
-      .select("assessments_used, assessments_cap, year_month")
+      .select("assessments_used, assessments_cap, period_month")
       .maybeSingle();
 
     if (!error && inserted) {
       return {
         assessments_used: Number(inserted.assessments_used) || 0,
         assessments_cap: Number(inserted.assessments_cap) || expectedCap,
-        year_month: String(inserted.year_month),
+        period_month: String(inserted.period_month),
       };
     }
 
     const { data: afterRace } = await supabase
       .from("usage_tracking")
-      .select("assessments_used, assessments_cap, year_month")
+      .select("assessments_used, assessments_cap, period_month")
       .eq("user_id", userId)
-      .eq("year_month", yearMonth)
+      .eq("period_month", periodMonth)
       .maybeSingle();
 
     if (
@@ -66,14 +66,14 @@ export async function ensureUsageTrackingForMonth(
         .from("usage_tracking")
         .update({ assessments_cap: expectedCap })
         .eq("user_id", userId)
-        .eq("year_month", yearMonth)
-        .select("assessments_used, assessments_cap, year_month")
+        .eq("period_month", periodMonth)
+        .select("assessments_used, assessments_cap, period_month")
         .maybeSingle();
       if (updated) {
         return {
           assessments_used: Number(updated.assessments_used) || 0,
           assessments_cap: Number(updated.assessments_cap) || expectedCap,
-          year_month: String(updated.year_month),
+          period_month: String(updated.period_month),
         };
       }
     }
@@ -82,7 +82,7 @@ export async function ensureUsageTrackingForMonth(
       return {
         assessments_used: Number(afterRace.assessments_used) || 0,
         assessments_cap: Number(afterRace.assessments_cap) || expectedCap,
-        year_month: String(afterRace.year_month),
+        period_month: String(afterRace.period_month),
       };
     }
     return null;
@@ -93,14 +93,14 @@ export async function ensureUsageTrackingForMonth(
       .from("usage_tracking")
       .update({ assessments_cap: expectedCap })
       .eq("user_id", userId)
-      .eq("year_month", yearMonth)
-      .select("assessments_used, assessments_cap, year_month")
+      .eq("period_month", periodMonth)
+      .select("assessments_used, assessments_cap, period_month")
       .maybeSingle();
     if (updated) {
       return {
         assessments_used: Number(updated.assessments_used) || 0,
         assessments_cap: Number(updated.assessments_cap) || expectedCap,
-        year_month: String(updated.year_month),
+        period_month: String(updated.period_month),
       };
     }
   }
@@ -108,6 +108,6 @@ export async function ensureUsageTrackingForMonth(
   return {
     assessments_used: Number(existing.assessments_used) || 0,
     assessments_cap: Number(existing.assessments_cap) || expectedCap,
-    year_month: String(existing.year_month),
+    period_month: String(existing.period_month),
   };
 }

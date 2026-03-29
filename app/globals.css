@@ -210,6 +210,21 @@ h4, h5, h6 {
   100% { background-position: 200% center; }
 }
 
+@keyframes orixlink-usage-skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.header-usage-skeleton {
+  display: inline-block;
+  width: 80px;
+  height: 14px;
+  background: rgba(200, 169, 110, 0.15);
+  border-radius: 4px;
+  animation: orixlink-usage-skeleton-pulse 1.5s ease-in-out infinite;
+  vertical-align: middle;
+}
+
 .animate-fade-up    { animation: fadeUp 0.6s var(--ease-smooth) both; }
 .animate-fade-in    { animation: fadeIn 0.5s var(--ease-smooth) both; }
 .animate-pulse-gold { animation: goldPulse 2.4s ease-out infinite; }

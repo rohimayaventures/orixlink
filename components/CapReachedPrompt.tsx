@@ -13,13 +13,32 @@ export type CapReachedPayload = {
 type Props = {
   payload: CapReachedPayload;
   onDismiss?: () => void;
+  /** Logged-out / anonymous cap UX (e.g. free run exhausted). */
+  isAnonymous?: boolean;
 };
 
 const GOLD = "var(--gold)";
 const OBS = "var(--obsidian)";
 
-export default function CapReachedPrompt({ payload, onDismiss }: Props) {
+export default function CapReachedPrompt({
+  payload,
+  onDismiss,
+  isAnonymous = false,
+}: Props) {
   const { assessments_cap: cap, reset_date: resetDate } = payload;
+
+  const headline = isAnonymous
+    ? "You've used your free assessment."
+    : cap === 5
+      ? "You've used all 5 assessments this month."
+      : `You've used all ${cap} assessments this month.`;
+
+  const primaryHref = isAnonymous ? "/auth/signup" : "/pricing";
+  const primaryLabel = isAnonymous
+    ? "Create a free account"
+    : cap === 5
+      ? "Upgrade to Pro"
+      : "Upgrade now";
 
   return (
     <div
@@ -42,7 +61,7 @@ export default function CapReachedPrompt({ payload, onDismiss }: Props) {
           lineHeight: 1.35,
         }}
       >
-        You have used all {cap} assessments this month
+        {headline}
       </p>
       <p
         style={{
@@ -66,7 +85,7 @@ export default function CapReachedPrompt({ payload, onDismiss }: Props) {
         }}
       >
         <Link
-          href="/pricing"
+          href={primaryHref}
           className="btn-gold"
           style={{
             display: "inline-block",
@@ -77,19 +96,26 @@ export default function CapReachedPrompt({ payload, onDismiss }: Props) {
             fontWeight: 600,
           }}
         >
-          Upgrade to Pro
+          {primaryLabel}
         </Link>
         <Link
-          href="/pricing"
+          href="/auth/signin"
+          className="btn-ghost-gold"
           style={{
+            display: "inline-block",
+            textAlign: "center",
+            minWidth: 200,
+            padding: "10px 18px",
             fontSize: "0.875rem",
-            color: GOLD,
             fontWeight: 600,
-            textDecoration: "underline",
             fontFamily: "var(--font-body), sans-serif",
+            borderWidth: "1.5px",
+            borderColor: GOLD,
+            color: "var(--text-on-light)",
+            textDecoration: "none",
           }}
         >
-          Buy more assessments
+          Sign in to a different account
         </Link>
         {onDismiss && (
           <button

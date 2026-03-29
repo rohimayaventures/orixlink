@@ -475,7 +475,16 @@ export default function ResultsPage() {
       { role: 'user', content: parsed.symptoms || 'Initial assessment' },
       { role: 'assistant', content: savedResponse },
     ])
+    if (sessionStorage.getItem('orixlink_history_warning') === '1') {
+      setShowHistoryWarning(true)
+    }
   }, [router])
+
+  useEffect(() => {
+    if (!showHistoryWarning) return
+    const t = window.setTimeout(() => setShowHistoryWarning(false), 6000)
+    return () => window.clearTimeout(t)
+  }, [showHistoryWarning])
 
   useEffect(() => {
     if (user || messages.length < 2) return
@@ -620,7 +629,10 @@ export default function ResultsPage() {
           </div>
           <Link
             href="/assessment"
-            onClick={() => sessionStorage.removeItem('orixlink_session_id')}
+            onClick={() => {
+              sessionStorage.removeItem('orixlink_session_id')
+              sessionStorage.removeItem('orixlink_assessment_draft')
+            }}
           >
             <button className="btn-ghost-gold" style={{ padding: '7px 16px', fontSize: '0.8125rem' }}>
               New Assessment <ArrowRightIcon style={{ width: 12, height: 12 }} />
@@ -631,27 +643,29 @@ export default function ResultsPage() {
 
       {showHistoryWarning && (
         <div
+          role="status"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
             padding: '10px 24px',
-            background: '#9A6B00',
             flexShrink: 0,
+            background: 'rgba(200,169,110,0.1)',
+            borderBottom: '1px solid rgba(200,169,110,0.3)',
           }}
         >
           <p
             style={{
               margin: 0,
-              fontFamily: 'var(--font-body), sans-serif',
+              fontFamily: 'var(--font-body), DM Sans, sans-serif',
               fontSize: 13,
               lineHeight: 1.45,
-              color: '#F4EFE6',
+              color: '#C8A96E',
               flex: 1,
             }}
           >
-            Your assessment ran but could not be saved to history. Your results are shown below.
+            Your assessment completed but could not be saved to history. Your results are shown below.
           </p>
           <button
             type="button"
@@ -666,8 +680,8 @@ export default function ResultsPage() {
               height: 32,
               border: 'none',
               borderRadius: 8,
-              background: 'rgba(244,239,230,0.15)',
-              color: '#F4EFE6',
+              background: 'rgba(200,169,110,0.12)',
+              color: '#C8A96E',
               cursor: 'pointer',
             }}
           >
@@ -687,6 +701,7 @@ export default function ResultsPage() {
             <CapReachedPrompt
               payload={capPayload}
               onDismiss={() => setCapPayload(null)}
+              isAnonymous={!user}
             />
           </div>
         )}

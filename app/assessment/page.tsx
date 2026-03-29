@@ -43,6 +43,8 @@ const CONTEXTS = [
   { id: 'other', label: 'Other', sub: 'Something else entirely' },
 ]
 
+const ASSESSMENT_DRAFT_KEY = 'orixlink_assessment_draft'
+
 export default function AssessmentPage() {
   const router = useRouter()
   const { user, openAuthModal } = useAuth()
@@ -60,11 +62,93 @@ export default function AssessmentPage() {
   const [error, setError] = useState('')
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [draftHydrated, setDraftHydrated] = useState(false)
 
   useEffect(() => {
     sessionStorage.removeItem('orixlink_session_id')
     setSessionId(null)
   }, [])
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(ASSESSMENT_DRAFT_KEY)
+      if (raw) {
+        const d = JSON.parse(raw) as Record<string, unknown>
+        if (typeof d.step === 'number' && d.step >= 1 && d.step <= 3) {
+          setStep(d.step)
+        }
+        if (typeof d.role === 'string') setRole(d.role)
+        if (typeof d.context === 'string') setContext(d.context)
+        if (typeof d.contextDetail === 'string') setContextDetail(d.contextDetail)
+        if (typeof d.patientAge === 'string') setPatientAge(d.patientAge)
+        if (typeof d.symptoms === 'string') setSymptoms(d.symptoms)
+        if (typeof d.duration === 'string') setDuration(d.duration)
+        if (typeof d.modifiers === 'string') setModifiers(d.modifiers)
+        if (typeof d.medications === 'string') setMedications(d.medications)
+        if (typeof d.language === 'string') setLanguage(d.language)
+      }
+    } catch {
+      /* ignore corrupt draft */
+    }
+    setDraftHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!draftHydrated) return
+    try {
+      sessionStorage.setItem(
+        ASSESSMENT_DRAFT_KEY,
+        JSON.stringify({
+          step,
+          role,
+          context,
+          contextDetail,
+          patientAge,
+          symptoms,
+          duration,
+          modifiers,
+          medications,
+          language,
+        })
+      )
+    } catch {
+      /* ignore quota */
+    }
+  }, [
+    step,
+    role,
+    context,
+    contextDetail,
+    patientAge,
+    symptoms,
+    duration,
+    modifiers,
+    medications,
+    language,
+    draftHydrated,
+  ])
+
+  function clearAssessmentDraft() {
+    try {
+      sessionStorage.removeItem(ASSESSMENT_DRAFT_KEY)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function handleStartOver() {
+    setStep(1)
+    setRole('')
+    setContext('')
+    setContextDetail('')
+    setPatientAge('')
+    setSymptoms('')
+    setDuration('')
+    setModifiers('')
+    setMedications('')
+    setLanguage(DEFAULT_LANGUAGE_CODE)
+    clearAssessmentDraft()
+  }
 
   const canProceedStep1 = role !== ''
   const canProceedStep2 = context !== ''
@@ -118,10 +202,16 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
         setSessionId(data.session_id)
         sessionStorage.setItem('orixlink_session_id', data.session_id)
       }
+      if (data.historyWarning === true) {
+        sessionStorage.setItem('orixlink_history_warning', '1')
+      } else {
+        sessionStorage.removeItem('orixlink_history_warning')
+      }
       sessionStorage.setItem('orixlink_response', data.response)
       sessionStorage.setItem('orixlink_session', JSON.stringify({
         role, context, language, patientAge, symptoms
       }))
+      clearAssessmentDraft()
       router.push('/assessment/results')
     } catch {
       setError('Something went wrong. Please try again.')
@@ -171,7 +261,26 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
             <HeaderAuth variant="light" />
             <button
               type="button"
-              onClick={() => router.push('/')}
+              onClick={handleStartOver}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--gold)',
+                fontSize: '0.8125rem',
+                fontFamily: 'var(--font-body), sans-serif',
+                textDecoration: 'underline',
+                padding: '6px 10px',
+              }}
+            >
+              Start over
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearAssessmentDraft()
+                router.push('/')
+              }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 background: 'none', border: 'none', cursor: 'pointer',
@@ -197,7 +306,14 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
           <button type="button" className="btn-gold" onClick={openAuthModal} style={{ marginBottom: 12 }}>
             Sign in or create account
           </button>
-          <button type="button" className="btn-ghost-gold" onClick={() => router.push('/')}>
+          <button
+            type="button"
+            className="btn-ghost-gold"
+            onClick={() => {
+              clearAssessmentDraft()
+              router.push('/')
+            }}
+          >
             Back to home
           </button>
         </div>
@@ -231,7 +347,26 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
           <HeaderAuth variant="light" />
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={handleStartOver}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--gold)',
+              fontSize: '0.8125rem',
+              fontFamily: 'var(--font-body), sans-serif',
+              textDecoration: 'underline',
+              padding: '6px 10px',
+            }}
+          >
+            Start over
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              clearAssessmentDraft()
+              router.push('/')
+            }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: 'none', cursor: 'pointer',
@@ -535,6 +670,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 <CapReachedPrompt
                   payload={capPayload}
                   onDismiss={() => setCapPayload(null)}
+                  isAnonymous={!user}
                 />
               )}
 

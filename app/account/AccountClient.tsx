@@ -13,12 +13,13 @@ type Props = {
     status: string;
     is_lifetime: boolean;
     stripe_customer_id: string | null;
+    current_period_start: string | null;
     current_period_end: string | null;
   } | null;
   usage: {
     assessments_used: number;
     assessments_cap: number;
-    year_month: string;
+    period_month: string;
   };
   creditSum: number;
 };
@@ -35,24 +36,47 @@ export default function AccountClient({
   const tier = subscription?.tier ?? "free";
   const used = usage.assessments_used;
   const cap = usage.assessments_cap;
-  const nextPeriodLabel = (() => {
-    if (subscription?.current_period_end) {
-      return new Date(subscription.current_period_end).toLocaleDateString(
-        "en-US",
-        { month: "long", day: "numeric", year: "numeric" }
-      );
-    }
-    if (subscription?.is_lifetime || subscription?.tier === "lifetime") {
-      return "Never -- lifetime access";
-    }
-    const [y, m] = (usage.year_month ?? "").split("-").map(Number);
-    if (!y || !m) return "—";
-    const d = new Date(y, m, 1);
-    return d.toLocaleDateString("en-US", {
+
+  const dateFmt = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     });
+
+  const isLifetimeNoEnd =
+    (subscription?.is_lifetime || subscription?.tier === "lifetime") &&
+    subscription?.current_period_end == null;
+
+  const billingLines = (() => {
+    if (isLifetimeNoEnd) {
+      return { kind: "lifetime" as const };
+    }
+    const start = subscription?.current_period_start;
+    const end = subscription?.current_period_end;
+    if (start && end) {
+      return {
+        kind: "period" as const,
+        current: `Current period: ${dateFmt(start)} -- ${dateFmt(end)}`,
+        renews: `Renews: ${dateFmt(end)}`,
+      };
+    }
+    if (end) {
+      return { kind: "renewsOnly" as const, renews: `Renews: ${dateFmt(end)}` };
+    }
+    const [y, m] = (usage.period_month ?? "").split("-").map(Number);
+    if (!y || !m) {
+      return { kind: "fallback" as const, renews: "Renews: —" };
+    }
+    const d = new Date(y, m, 1);
+    return {
+      kind: "fallback" as const,
+      renews: `Renews: ${d.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })}`,
+    };
   })();
 
   async function openBillingPortal() {
@@ -150,9 +174,24 @@ export default function AccountClient({
           >
             {used} / {cap} used
           </p>
-          <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
-            Next period starts {nextPeriodLabel}
-          </p>
+          {billingLines.kind === "lifetime" ? (
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
+              Lifetime access -- never expires
+            </p>
+          ) : billingLines.kind === "period" ? (
+            <>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
+                {billingLines.current}
+              </p>
+              <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
+                {billingLines.renews}
+              </p>
+            </>
+          ) : (
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
+              {billingLines.renews}
+            </p>
+          )}
         </div>
 
         <div className="card-dark" style={{ padding: "24px", marginBottom: 24 }}>

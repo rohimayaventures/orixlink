@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import HeaderAuth from "@/components/HeaderAuth";
 import {
   ActivityLogIcon,
@@ -11,9 +13,22 @@ import {
   MixerHorizontalIcon,
   ChatBubbleIcon,
   UpdateIcon,
+  Cross2Icon,
 } from "@radix-ui/react-icons";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session") !== "expired") return;
+    setSessionExpiredNotice(true);
+    router.replace("/", { scroll: false });
+    const t = window.setTimeout(() => setSessionExpiredNotice(false), 5000);
+    return () => window.clearTimeout(t);
+  }, [router]);
+
   return (
     <main className="min-h-screen" style={{ background: "var(--obsidian)" }}>
 
@@ -41,6 +56,53 @@ export default function LandingPage() {
         </div>
         <HeaderAuth variant="dark" />
       </nav>
+
+      {sessionExpiredNotice && (
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            top: 80,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 45,
+            maxWidth: "min(92vw, 520px)",
+            width: "min(92vw, 520px)",
+            background: "rgba(200,169,110,0.08)",
+            border: "1px solid rgba(200,169,110,0.2)",
+            color: "rgba(244,239,230,0.7)",
+            fontFamily: "var(--font-body), DM Sans, sans-serif",
+            fontSize: "13px",
+            padding: "12px 20px",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            boxSizing: "border-box",
+          }}
+        >
+          <p style={{ margin: 0, flex: 1, lineHeight: 1.45 }}>
+            You were signed out due to inactivity. Your health information is protected.
+          </p>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setSessionExpiredNotice(false)}
+            style={{
+              flexShrink: 0,
+              background: "transparent",
+              border: "none",
+              color: "rgba(244,239,230,0.55)",
+              cursor: "pointer",
+              padding: 4,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <Cross2Icon width={16} height={16} />
+          </button>
+        </div>
+      )}
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section style={{

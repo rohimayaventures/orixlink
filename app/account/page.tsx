@@ -28,7 +28,7 @@ export default async function AccountPage() {
     )) ?? {
       assessments_used: 0,
       assessments_cap: usageCapFromSubscriptionRow(subRes.data),
-      year_month: yearMonth,
+      period_month: yearMonth,
     };
 
   const creditSum = (creditsRes.data ?? []).reduce(

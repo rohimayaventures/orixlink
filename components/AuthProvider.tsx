@@ -15,6 +15,8 @@ import {
   getAnonSessionData,
 } from "@/lib/anonSession";
 import AuthModal from "@/components/AuthModal";
+import { SessionWarningBanner } from "@/components/SessionWarningBanner";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 
 type AuthCtx = {
   user: User | null;
@@ -32,6 +34,17 @@ export function useAuth() {
   const v = useContext(Ctx);
   if (!v) throw new Error("useAuth must be used within AuthProvider");
   return v;
+}
+
+function SessionTimeoutShell({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  useSessionTimeout(Boolean(user) && !loading);
+  return (
+    <>
+      {children}
+      <SessionWarningBanner />
+    </>
+  );
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -121,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <Ctx.Provider value={value}>
-      {children}
+      <SessionTimeoutShell>{children}</SessionTimeoutShell>
       {supabase && (
         <AuthModal
           open={authModalOpen}
