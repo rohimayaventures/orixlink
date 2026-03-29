@@ -10,7 +10,14 @@ import { ensureUsageTrackingForMonth } from "@/lib/ensureUsageTracking";
 
 type Variant = "dark" | "light";
 
-export default function HeaderAuth({ variant }: { variant: Variant }) {
+export default function HeaderAuth({
+  variant,
+  omitPricing = false,
+}: {
+  variant: Variant;
+  /** Hide Pricing link (e.g. in assessment flow where horizontal space is tight). */
+  omitPricing?: boolean;
+}) {
   const { user, loading, openAuthModal } = useAuth();
   const router = useRouter();
   const [usage, setUsage] = useState<{
@@ -96,19 +103,22 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
 
   if (!user) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <Link
-          href="/pricing"
-          style={{
-            fontSize: "0.8125rem",
-            fontWeight: 600,
-            color: muted,
-            textDecoration: "none",
-            fontFamily: "var(--font-body), sans-serif",
-          }}
-        >
-          Pricing
-        </Link>
+      <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 sm:gap-x-3.5">
+        {!omitPricing && (
+          <Link
+            href="/pricing"
+            style={{
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+              color: muted,
+              textDecoration: "none",
+              fontFamily: "var(--font-body), sans-serif",
+              padding: "6px 4px",
+            }}
+          >
+            Pricing
+          </Link>
+        )}
         <Link
           href="/auth/signup"
           style={{
@@ -117,6 +127,7 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
             color: gold,
             textDecoration: "none",
             fontFamily: "var(--font-body), sans-serif",
+            padding: "6px 4px",
           }}
         >
           Sign up
@@ -125,7 +136,7 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
           type="button"
           onClick={openAuthModal}
           style={{
-            padding: "6px 14px",
+            padding: "8px 14px",
             borderRadius: 8,
             border: `1.5px solid ${gold}`,
             background: "transparent",
@@ -156,48 +167,56 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
     "?";
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <Link
-        href="/pricing"
-        style={{
-          fontSize: "0.8125rem",
-          fontWeight: 600,
-          color: gold,
-          textDecoration: "none",
-          fontFamily: "var(--font-body), sans-serif",
-        }}
-      >
-        Pricing
-      </Link>
+    <div className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:gap-x-3">
+      {!omitPricing && (
+        <Link
+          href="/pricing"
+          style={{
+            fontSize: "0.8125rem",
+            fontWeight: 600,
+            color: gold,
+            textDecoration: "none",
+            fontFamily: "var(--font-body), sans-serif",
+            padding: "6px 2px",
+          }}
+        >
+          Pricing
+        </Link>
+      )}
       {usageLoading ? (
         <span className="header-usage-skeleton" aria-hidden />
       ) : remaining !== null ? (
         <span
+          className="whitespace-nowrap"
           style={{
-            fontSize: "0.75rem",
             fontFamily: "var(--font-mono)",
             letterSpacing: "0.04em",
             color: usageColor,
+            fontSize: "0.6875rem",
           }}
         >
-          {remaining} assessments left
+          <span className="sm:hidden">{remaining} left</span>
+          <span className="hidden sm:inline" style={{ fontSize: "0.75rem" }}>
+            {remaining} assessments left
+          </span>
         </span>
       ) : null}
       <Link
         href="/account"
+        aria-label="Account"
+        className="inline-flex min-h-[40px] min-w-[40px] items-center sm:min-h-0 sm:min-w-0"
         style={{
-          display: "flex",
-          alignItems: "center",
           gap: 8,
           textDecoration: "none",
           color: isDark ? cream : "var(--text-on-light)",
           fontSize: "0.8125rem",
+          padding: "4px 2px",
         }}
       >
         <span
           style={{
-            width: 28,
-            height: 28,
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             background: "rgba(200,169,110,0.25)",
             border: `1px solid ${gold}`,
@@ -207,11 +226,12 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
             fontSize: "0.65rem",
             fontWeight: 700,
             color: gold,
+            flexShrink: 0,
           }}
         >
           {initials}
         </span>
-        Account
+        <span className="hidden sm:inline">Account</span>
       </Link>
       {isAdmin && (
         <Link
@@ -222,6 +242,7 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
             textDecoration: "none",
             fontWeight: 600,
             fontFamily: "var(--font-body), sans-serif",
+            padding: "6px 2px",
           }}
         >
           Admin
@@ -230,6 +251,7 @@ export default function HeaderAuth({ variant }: { variant: Variant }) {
       <button
         type="button"
         onClick={signOut}
+        className="min-h-[40px] px-1 sm:min-h-0"
         style={{
           background: "none",
           border: "none",

@@ -546,36 +546,36 @@ export default function ResultsPage() {
     <main style={{ minHeight: '100vh', background: '#080C14', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Nav ── */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 24px', flexShrink: 0,
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        background: '#080C14',
-      }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+      <nav
+        className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6 sm:py-3.5"
+        style={{ background: '#080C14' }}
+      >
+        <Link href="/" className="flex min-w-0 max-w-full shrink-0 items-center gap-2 sm:gap-2.5 no-underline">
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
             border: '1.5px solid rgba(200,169,110,0.35)', background: 'rgba(200,169,110,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
           }}>
             <ActivityLogIcon style={{ color: '#C8A96E', width: 13, height: 13 }} />
           </div>
-          <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: TEXT }}>
+          <span className="font-display max-[380px]:hidden truncate text-[1.0625rem] font-medium" style={{ color: TEXT }}>
             OrixLink <span style={{ color: '#C8A96E' }}>AI</span>
           </span>
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <HeaderAuth variant="dark" />
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '5px 12px', borderRadius: 100, fontSize: '0.75rem', fontWeight: 600,
-            fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
-            background: urgencyCfg.badgeBg,
-            border: `1px solid ${urgencyCfg.badgeBorder}`,
-            color: urgencyCfg.badgeText,
-          }}>
+        <div className="flex min-w-0 flex-[1_1_auto] flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:flex-none sm:gap-3">
+          <HeaderAuth variant="dark" omitPricing />
+          <div
+            className="inline-flex max-w-[min(100%,11rem)] shrink items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold tracking-wide sm:max-w-none sm:gap-1.5 sm:px-3 sm:text-[0.75rem]"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              background: urgencyCfg.badgeBg,
+              border: `1px solid ${urgencyCfg.badgeBorder}`,
+              color: urgencyCfg.badgeText,
+            }}
+          >
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: urgencyCfg.dotColor, flexShrink: 0 }} />
-            {urgencyCfg.label}
+            <span className="truncate">{urgencyCfg.label}</span>
           </div>
           <Link
             href="/assessment"
@@ -586,14 +586,16 @@ export default function ResultsPage() {
           >
             <button
               type="button"
+              className="inline-flex min-h-[40px] items-center gap-1.5 px-3 sm:min-h-0 sm:px-4"
               style={{
-                padding: '7px 16px', fontSize: '0.8125rem', fontWeight: 600,
+                fontSize: '0.8125rem', fontWeight: 600,
                 background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: '#C8A96E',
                 borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-body), sans-serif',
-                display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
             >
-              New Assessment <ArrowRightIcon style={{ width: 12, height: 12 }} />
+              <span className="hidden sm:inline">New Assessment </span>
+              <span className="sm:hidden">New </span>
+              <ArrowRightIcon style={{ width: 12, height: 12, flexShrink: 0 }} />
             </button>
           </Link>
         </div>

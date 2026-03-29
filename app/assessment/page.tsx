@@ -252,23 +252,22 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
   if (anonGate) {
     return (
       <main style={{ minHeight: '100vh', background: BG_PAGE, display: 'flex', flexDirection: 'column' }}>
-        <nav style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-          background: BG_PAGE,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <ActivityLogIcon style={{ color: GOLD, width: 20, height: 20 }} />
-            <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: TEXT }}>
+        <nav
+          className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6 sm:py-4"
+          style={{ background: BG_PAGE }}
+        >
+          <div className="flex min-w-0 max-w-full shrink-0 items-center gap-2 sm:gap-2.5">
+            <ActivityLogIcon style={{ color: GOLD, width: 20, height: 20, flexShrink: 0 }} />
+            <span className="font-display max-[380px]:hidden truncate text-[1.0625rem] font-medium" style={{ color: TEXT }}>
               OrixLink <span style={{ color: GOLD }}>AI</span>
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <HeaderAuth variant="dark" />
+          <div className="flex min-w-0 flex-[1_1_auto] flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:flex-none sm:gap-x-4">
+            <HeaderAuth variant="dark" omitPricing />
             <button
               type="button"
               onClick={handleStartOver}
+              className="min-h-[40px] px-2 sm:min-h-0"
               style={{
                 background: 'none',
                 border: 'none',
@@ -277,7 +276,6 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 fontSize: '0.8125rem',
                 fontFamily: 'var(--font-body), sans-serif',
                 textDecoration: 'underline',
-                padding: '6px 10px',
               }}
             >
               Start over
@@ -288,14 +286,14 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 clearAssessmentDraft()
                 router.push('/')
               }}
+              className="inline-flex min-h-[40px] items-center gap-1.5 px-2 sm:min-h-0"
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: MUTED, fontSize: '0.8125rem',
-                padding: '6px 10px', borderRadius: 6,
+                borderRadius: 6,
               }}
             >
-              <Cross2Icon style={{ width: 12, height: 12 }} />
+              <Cross2Icon style={{ width: 12, height: 12, flexShrink: 0 }} />
               Exit
             </button>
           </div>
@@ -337,29 +335,29 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
     <main style={{ minHeight: '100vh', background: BG_PAGE, display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Nav ── */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        background: BG_PAGE,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <nav
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6 sm:py-4"
+        style={{ background: BG_PAGE }}
+      >
+        <div className="flex min-w-0 max-w-full shrink-0 items-center gap-2 sm:gap-2.5">
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
             border: '1.5px solid rgba(200,169,110,0.35)', background: 'rgba(200,169,110,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
           }}>
             <ActivityLogIcon style={{ color: GOLD, width: 13, height: 13 }} />
           </div>
-          <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: TEXT }}>
+          <span className="font-display max-[380px]:hidden truncate text-[1.0625rem] font-medium" style={{ color: TEXT }}>
             OrixLink <span style={{ color: GOLD }}>AI</span>
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <HeaderAuth variant="dark" />
+        <div className="flex min-w-0 flex-[1_1_auto] flex-wrap items-center justify-end gap-x-2 gap-y-2 sm:flex-none sm:gap-x-4">
+          <HeaderAuth variant="dark" omitPricing />
           <button
             type="button"
             onClick={handleStartOver}
+            className="min-h-[40px] px-2 sm:min-h-0"
             style={{
               background: 'none',
               border: 'none',
@@ -368,7 +366,6 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               fontSize: '0.8125rem',
               fontFamily: 'var(--font-body), sans-serif',
               textDecoration: 'underline',
-              padding: '6px 10px',
             }}
           >
             Start over
@@ -379,14 +376,14 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               clearAssessmentDraft()
               router.push('/')
             }}
+            className="inline-flex min-h-[40px] items-center gap-1.5 px-2 sm:min-h-0"
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: 'none', cursor: 'pointer',
               color: MUTED, fontSize: '0.8125rem',
-              padding: '6px 10px', borderRadius: 6,
+              borderRadius: 6,
             }}
           >
-            <Cross2Icon style={{ width: 12, height: 12 }} />
+            <Cross2Icon style={{ width: 12, height: 12, flexShrink: 0 }} />
             Exit
           </button>
         </div>
