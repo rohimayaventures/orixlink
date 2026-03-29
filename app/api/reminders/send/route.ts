@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
-import { loops } from "@/lib/loops";
+import { resend } from "@/lib/resend";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -334,19 +334,16 @@ export async function POST(request: NextRequest) {
           assessmentUrl,
         });
 
-        await loops.sendTransactionalEmail({
-          transactionalId: TRANSACTIONAL_ID,
-          email: reminder.email,
-          dataVariables: {
-            firstName: reminder.first_name || "there",
-            hoursAgo: reminder.hours_delay,
-            chiefComplaint:
-              reminder.chief_complaint || "your recent symptoms",
-            urgencyTier: reminder.urgency_tier || "Not specified",
-            assessmentUrl,
-            htmlBody,
-          },
-          addToAudience: false,
+        await resend.emails.send({
+          from:
+            process.env.RESEND_FROM_EMAIL || "reminders@rohimaya.ai",
+          to: reminder.email,
+          subject: "Your OrixLink follow-up check-in",
+          html: htmlBody,
+          tags: [
+            { name: "category", value: "reminder" },
+            { name: "hours", value: String(reminder.hours_delay) },
+          ],
         });
 
         const { error: updateError } = await supabaseAdmin
