@@ -3,6 +3,40 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 
+const GOLD = "#C8A96E";
+const TEXT = "#F4EFE6";
+const MUTED = "rgba(244,239,230,0.5)";
+
+const URGENCY_ROW: Record<
+  string,
+  { label: string; bg: string; border: string; color: string }
+> = {
+  EMERGENCY_DEPARTMENT_NOW: {
+    label: "Emergency",
+    bg: "rgba(239,68,68,0.14)",
+    border: "rgba(239,68,68,0.45)",
+    color: "#FCA5A5",
+  },
+  URGENT_CARE: {
+    label: "Urgent care",
+    bg: "rgba(249,115,22,0.14)",
+    border: "rgba(249,115,22,0.45)",
+    color: "#FDBA74",
+  },
+  CONTACT_DOCTOR_TODAY: {
+    label: "Contact doctor",
+    bg: "rgba(234,179,8,0.14)",
+    border: "rgba(234,179,8,0.45)",
+    color: "#FDE047",
+  },
+  MONITOR_AT_HOME: {
+    label: "Monitor at home",
+    bg: "rgba(34,197,94,0.14)",
+    border: "rgba(34,197,94,0.45)",
+    color: "#86EFAC",
+  },
+};
+
 export default async function HistoryPage() {
   const supabase = await createClient();
   const {
@@ -28,13 +62,13 @@ export default async function HistoryPage() {
         </p>
         <h1
           className="font-display"
-          style={{ fontSize: "2.25rem", fontWeight: 400, marginBottom: 8, color: "var(--text-on-dark)" }}
+          style={{ fontSize: "2.25rem", fontWeight: 400, marginBottom: 8, color: TEXT }}
         >
           History
         </h1>
         <p
           style={{
-            color: "var(--text-muted-dark)",
+            color: MUTED,
             marginBottom: 24,
             fontFamily: "var(--font-body), sans-serif",
             fontSize: "0.9375rem",
@@ -43,33 +77,80 @@ export default async function HistoryPage() {
           Saved assessments linked to your account.
         </p>
         {!sessions?.length ? (
-          <p style={{ color: "var(--text-muted-dark)" }}>
+          <p style={{ color: MUTED }}>
             No saved sessions yet.{" "}
-            <Link href="/assessment" style={{ color: "var(--gold)" }}>
+            <Link href="/assessment" style={{ color: GOLD }}>
               Run an assessment
             </Link>
           </p>
         ) : (
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {sessions.map((s) => (
-              <li key={s.id} className="card-dark" style={{ padding: 16, marginBottom: 10 }}>
-                <span
+            {sessions.map((s) => {
+              const u = s.urgency_level as string | null;
+              const meta =
+                u && URGENCY_ROW[u]
+                  ? URGENCY_ROW[u]
+                  : URGENCY_ROW.CONTACT_DOCTOR_TODAY;
+              return (
+                <li
+                  key={s.id as string}
                   style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "0.75rem",
-                    color: "var(--gold-muted)",
+                    padding: "1rem 1.25rem",
+                    marginBottom: 10,
+                    background: "#0D1220",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: 12,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
                   }}
                 >
-                  {new Date(s.created_at as string).toLocaleString()}
-                </span>
-                <p style={{ margin: "8px 0 0", color: "var(--text-on-dark)" }}>
-                  {s.role as string} · {s.context as string}
-                  {s.urgency_level
-                    ? ` · ${String(s.urgency_level).replace(/_/g, " ")}`
-                    : ""}
-                </p>
-              </li>
-            ))}
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        fontFamily: "var(--font-mono)",
+                        letterSpacing: "0.06em",
+                        padding: "4px 8px",
+                        borderRadius: 100,
+                        background: meta.bg,
+                        border: `1px solid ${meta.border}`,
+                        color: meta.color,
+                        marginBottom: 8,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {meta.label}
+                    </span>
+                    <p style={{ margin: 0, fontSize: "0.8125rem", color: MUTED, fontFamily: "var(--font-mono)" }}>
+                      {new Date(s.created_at as string).toLocaleString()}
+                    </p>
+                    <p style={{ margin: "8px 0 0", color: TEXT }}>
+                      {s.role as string} · {s.context as string}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/assessment/${s.id}`}
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      color: GOLD,
+                      fontFamily: "DM Sans, sans-serif",
+                      textDecoration: "none",
+                      padding: "8px 16px",
+                      border: "1px solid rgba(200,169,110,0.4)",
+                      borderRadius: 8,
+                    }}
+                  >
+                    View
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

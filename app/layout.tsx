@@ -30,11 +30,16 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "OrixLink AI — Where every symptom finds its answer",
   description:
-    "Universal clinical triage and diagnosis. Any symptom. Any person. No prior diagnosis required.",
+    "Universal clinical triage and AI-assisted symptom assessment. Any symptom. Any person. No prior medical context required.",
   keywords: [
     "symptom checker",
     "clinical triage",
-    "AI diagnosis",
+    "health triage",
+    "clinical triage AI",
+    "AI symptom assessment",
+    "symptom analysis",
+    "AI health guidance",
+    "medical symptom tool",
     "healthcare AI",
     "OrixLink",
     "Rohimaya Health AI",

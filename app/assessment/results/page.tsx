@@ -26,120 +26,56 @@ import CapReachedPrompt, {
   type CapReachedPayload,
 } from '@/components/CapReachedPrompt'
 import { setAnonSessionData } from '@/lib/anonSession'
+import { parseAssessment, type ParsedAssessment } from '@/lib/parseAssessment'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
-type ParsedAssessment = {
-  urgencyLevel: string
-  urgencyExplanation: string
-  differential: { likelihood: string; name: string; reason: string }[]
-  redFlags: { flag: string; status: string }[]
-  nextSteps: string
-  followUpPrompts: string[]
-  disclaimer: string
-}
+const TEXT = '#F4EFE6'
+const MUTED = 'rgba(244,239,230,0.5)'
+const CARD_BG = '#0D1220'
+const CARD_BORDER = '1px solid rgba(255,255,255,0.07)'
 
-const URGENCY: Record<string, { label: string; cssClass: string; dotColor: string }> = {
+const URGENCY: Record<string, { label: string; dotColor: string; badgeBg: string; badgeBorder: string; badgeText: string }> = {
   EMERGENCY_DEPARTMENT_NOW: {
     label: 'Emergency Department — Now',
-    cssClass: 'urgency-critical',
-    dotColor: 'var(--urgent-critical)',
+    dotColor: '#F87171',
+    badgeBg: 'rgba(239,68,68,0.14)',
+    badgeBorder: 'rgba(239,68,68,0.45)',
+    badgeText: '#FCA5A5',
   },
   URGENT_CARE: {
     label: 'Urgent Care',
-    cssClass: 'urgency-high',
-    dotColor: 'var(--urgent-high)',
+    dotColor: '#FB923C',
+    badgeBg: 'rgba(249,115,22,0.14)',
+    badgeBorder: 'rgba(249,115,22,0.45)',
+    badgeText: '#FDBA74',
   },
   CONTACT_DOCTOR_TODAY: {
     label: 'Contact Doctor Today',
-    cssClass: 'urgency-moderate',
-    dotColor: 'var(--urgent-moderate)',
+    dotColor: '#FACC15',
+    badgeBg: 'rgba(234,179,8,0.14)',
+    badgeBorder: 'rgba(234,179,8,0.45)',
+    badgeText: '#FDE047',
   },
   MONITOR_AT_HOME: {
     label: 'Monitor at Home',
-    cssClass: 'urgency-low',
-    dotColor: 'var(--urgent-low)',
+    dotColor: '#4ADE80',
+    badgeBg: 'rgba(34,197,94,0.14)',
+    badgeBorder: 'rgba(34,197,94,0.45)',
+    badgeText: '#86EFAC',
   },
 }
 
 const LIKELIHOOD_COLOR: Record<string, { bg: string; text: string; border: string }> = {
-  HIGH:     { bg: 'var(--urgent-critical-bg)', text: 'var(--urgent-critical)', border: 'var(--urgent-critical)' },
-  MODERATE: { bg: 'var(--urgent-high-bg)',     text: 'var(--urgent-high)',     border: 'var(--urgent-high)' },
-  LOWER:    { bg: 'var(--cream-border)',        text: 'var(--text-muted-light)', border: 'var(--cream-border)' },
+  HIGH:     { bg: 'rgba(239,68,68,0.12)', text: '#FCA5A5', border: 'rgba(239,68,68,0.5)' },
+  MODERATE: { bg: 'rgba(249,115,22,0.12)', text: '#FDBA74', border: 'rgba(249,115,22,0.45)' },
+  LOWER:    { bg: 'rgba(255,255,255,0.06)', text: 'rgba(244,239,230,0.7)', border: 'rgba(255,255,255,0.12)' },
 }
 
 const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; border: string }> = {
-  PRESENT: { icon: '+', bg: 'var(--urgent-critical-bg)', text: 'var(--urgent-critical)', border: 'var(--urgent-critical)' },
-  ABSENT:  { icon: '−', bg: 'var(--urgent-low-bg)',      text: 'var(--urgent-low)',      border: 'var(--urgent-low)' },
-  UNKNOWN: { icon: '?', bg: 'var(--cream-border)',        text: 'var(--text-muted-light)', border: 'var(--cream-border)' },
-}
-
-function parseAssessment(text: string): ParsedAssessment {
-  const urgencyLevel = (() => {
-    if (text.includes('EMERGENCY_DEPARTMENT_NOW')) return 'EMERGENCY_DEPARTMENT_NOW'
-    if (text.includes('URGENT_CARE')) return 'URGENT_CARE'
-    if (text.includes('CONTACT_DOCTOR_TODAY')) return 'CONTACT_DOCTOR_TODAY'
-    if (text.includes('MONITOR_AT_HOME')) return 'MONITOR_AT_HOME'
-    return 'CONTACT_DOCTOR_TODAY'
-  })()
-
-  const getSection = (key: string): string => {
-    const patterns = [
-      new RegExp(`\\*{0,2}${key}\\*{0,2}[:\\s*]+([\\s\\S]*?)(?=\\n\\*{0,2}(?:URGENCY|DIFFERENTIAL|RED_FLAGS|NEXT_STEPS|FOLLOW_UP|$))`, 'i'),
-      new RegExp(`${key}[:\\s]+([\\s\\S]*?)(?=\\n[A-Z_]{3,}[:\\s]|$)`, 'i'),
-    ]
-    for (const pattern of patterns) {
-      const match = text.match(pattern)
-      if (match?.[1]?.trim()) return match[1].trim()
-    }
-    return ''
-  }
-
-  const urgencyExplanation = getSection('URGENCY_EXPLANATION').replace(/\*\*/g, '').replace(/^\*+|\*+$/g, '').trim()
-
-  const diffSection = getSection('DIFFERENTIAL')
-  const differential = diffSection
-    .split('\n').filter(l => l.trim())
-    .map(line => {
-      const clean = line.replace(/^\d+\.\s*/, '').replace(/\*\*/g, '').trim()
-      const m = clean.match(/^(HIGH|MODERATE|LOWER)[:\s*-]+(.+?)(?:\s*[-–:]\s*(.+))?$/i)
-      if (m) return { likelihood: m[1].toUpperCase(), name: m[2].trim(), reason: m[3]?.trim() || '' }
-      return null
-    }).filter(Boolean) as { likelihood: string; name: string; reason: string }[]
-
-  const flagSection = getSection('RED_FLAGS')
-  const redFlags = flagSection
-    .split('\n').filter(l => l.trim())
-    .map(line => {
-      const clean = line.replace(/^[-•]\s*/, '').replace(/\*\*/g, '').trim()
-      const m = clean.match(/^(.+?):\s*(PRESENT|ABSENT|UNKNOWN)\s*$/i)
-      if (m) return { flag: m[1].trim(), status: m[2].toUpperCase() }
-      if (clean.match(/PRESENT/i)) return { flag: clean.replace(/PRESENT/i, '').replace(/[-:]/g, '').trim(), status: 'PRESENT' }
-      if (clean.match(/ABSENT/i))  return { flag: clean.replace(/ABSENT/i, '').replace(/[-:]/g, '').trim(),  status: 'ABSENT' }
-      if (clean.match(/UNKNOWN/i)) return { flag: clean.replace(/UNKNOWN/i, '').replace(/[-:]/g, '').trim(), status: 'UNKNOWN' }
-      return null
-    }).filter(f => f && f.flag.length > 2) as { flag: string; status: string }[]
-
-  const nextSteps = getSection('NEXT_STEPS').replace(/\*\*/g, '').trim()
-
-  const followUpPrompts = (() => {
-    const section = getSection('FOLLOW_UP_PROMPTS')
-    if (!section) {
-      const directMatch = text.match(/FOLLOW_UP_PROMPTS[:\s*]+\n?([\s\S]*?)(?=\n\*{0,2}[A-Z]|OrixLink AI provides|$)/i)
-      if (!directMatch) return []
-      return directMatch[1].split('\n').filter(l => l.trim())
-        .map(l => l.replace(/^\d+\.\s*|^[-•]\s*/, '').replace(/"/g, '').replace(/\*\*/g, '').trim())
-        .filter(l => l.length > 5).slice(0, 3)
-    }
-    return section.split('\n').filter(l => l.trim())
-      .map(l => l.replace(/^\d+\.\s*|^[-•]\s*/, '').replace(/"/g, '').replace(/\*\*/g, '').trim())
-      .filter(l => l.length > 5).slice(0, 3)
-  })()
-
-  const disclaimerMatch = text.match(/OrixLink AI provides[\s\S]*?call 911\./)
-  const disclaimer = disclaimerMatch?.[0] || 'OrixLink AI provides clinical support only. Not a diagnosis. If this is an emergency call 911.'
-
-  return { urgencyLevel, urgencyExplanation, differential, redFlags, nextSteps, followUpPrompts, disclaimer }
+  PRESENT: { icon: '+', bg: 'rgba(239,68,68,0.15)', text: '#FCA5A5', border: 'rgba(239,68,68,0.5)' },
+  ABSENT:  { icon: '−', bg: 'rgba(34,197,94,0.12)', text: '#86EFAC', border: 'rgba(34,197,94,0.45)' },
+  UNKNOWN: { icon: '?', bg: 'rgba(255,255,255,0.06)', text: MUTED, border: 'rgba(255,255,255,0.12)' },
 }
 
 // ── Share summary builder ─────────────────────────────────────────
@@ -229,19 +165,19 @@ function EmergencyEnglishDuplicateBanner({ tier }: { tier: 'moderate' | 'low' })
       style={{
         fontSize: '0.875rem',
         lineHeight: 1.55,
-        color: '#1A1410',
+        color: TEXT,
         padding: '14px 16px',
         borderRadius: 10,
         marginBottom: 12,
-        border: `2px solid ${moderate ? '#D4882A' : '#C0392B'}`,
-        background: moderate ? 'rgba(212,136,42,0.12)' : 'rgba(192,57,43,0.1)',
+        border: `2px solid ${moderate ? 'rgba(212,136,42,0.55)' : 'rgba(192,57,43,0.55)'}`,
+        background: moderate ? 'rgba(212,136,42,0.12)' : 'rgba(192,57,43,0.12)',
       }}
     >
       <p
         style={{
           fontWeight: 700,
           marginBottom: 6,
-          color: moderate ? '#D4882A' : '#C0392B',
+          color: moderate ? '#FBBF24' : '#F87171',
           fontSize: '0.6875rem',
           letterSpacing: '0.08em',
           fontFamily: 'var(--font-mono)',
@@ -254,7 +190,7 @@ function EmergencyEnglishDuplicateBanner({ tier }: { tier: 'moderate' | 'low' })
         style={{
           margin: '8px 0 0',
           fontSize: '0.75rem',
-          color: 'var(--text-muted-light)',
+          color: MUTED,
         }}
       >
         The assessment above may be in another language. This repeats the
@@ -267,13 +203,22 @@ function EmergencyEnglishDuplicateBanner({ tier }: { tier: 'moderate' | 'low' })
 function UrgencyBanner({ level, explanation }: { level: string; explanation: string }) {
   const cfg = URGENCY[level] || URGENCY.CONTACT_DOCTOR_TODAY
   return (
-    <div className={cfg.cssClass} style={{ padding: '16px 20px', borderRadius: 10, marginBottom: 12 }}>
+    <div
+      style={{
+        padding: '16px 20px',
+        borderRadius: 12,
+        marginBottom: 12,
+        background: cfg.badgeBg,
+        border: `1px solid ${cfg.badgeBorder}`,
+        color: cfg.badgeText,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: explanation ? 8 : 0 }}>
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.dotColor, flexShrink: 0 }} />
-        <span className="font-display" style={{ fontSize: '1.125rem', fontWeight: 500 }}>{cfg.label}</span>
+        <span className="font-display" style={{ fontSize: '1.125rem', fontWeight: 500, color: cfg.badgeText }}>{cfg.label}</span>
       </div>
       {explanation && (
-        <p style={{ fontSize: '0.875rem', lineHeight: 1.6, marginLeft: 20, opacity: 0.9 }}>{explanation}</p>
+        <p style={{ fontSize: '0.875rem', lineHeight: 1.6, marginLeft: 20, color: 'rgba(244,239,230,0.85)' }}>{explanation}</p>
       )}
     </div>
   )
@@ -282,11 +227,11 @@ function UrgencyBanner({ level, explanation }: { level: string; explanation: str
 function NextStepsCard({ steps }: { steps: string }) {
   if (!steps) return null
   return (
-    <div className="card-clinical" style={{ padding: '20px', marginBottom: 12 }}>
-      <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--gold-muted)', marginBottom: 10 }}>
+    <div style={{ padding: '20px', marginBottom: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 12 }}>
+      <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#C8A96E', marginBottom: 10 }}>
         Next Steps
       </p>
-      <p style={{ fontSize: '0.9375rem', color: 'var(--text-on-light)', lineHeight: 1.65 }}>{steps}</p>
+      <p style={{ fontSize: '0.9375rem', color: TEXT, lineHeight: 1.65 }}>{steps}</p>
     </div>
   )
 }
@@ -294,8 +239,8 @@ function NextStepsCard({ steps }: { steps: string }) {
 function DifferentialCard({ items }: { items: { likelihood: string; name: string; reason: string }[] }) {
   if (!items.length) return null
   return (
-    <div className="card-clinical" style={{ padding: '20px', marginBottom: 12 }}>
-      <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--gold-muted)', marginBottom: 12 }}>
+    <div style={{ padding: '20px', marginBottom: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 12 }}>
+      <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#C8A96E', marginBottom: 12 }}>
         Most Likely Explanations
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -311,9 +256,9 @@ function DifferentialCard({ items }: { items: { likelihood: string; name: string
                 }}>
                   {item.likelihood}
                 </span>
-                <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-on-light)' }}>{item.name}</span>
+                <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: TEXT }}>{item.name}</span>
               </div>
-              {item.reason && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted-light)', lineHeight: 1.55 }}>{item.reason}</p>}
+              {item.reason && <p style={{ fontSize: '0.8125rem', color: MUTED, lineHeight: 1.55 }}>{item.reason}</p>}
             </div>
           )
         })}
@@ -325,8 +270,8 @@ function DifferentialCard({ items }: { items: { likelihood: string; name: string
 function RedFlagCard({ flags }: { flags: { flag: string; status: string }[] }) {
   if (!flags.length) return null
   return (
-    <div className="card-clinical" style={{ padding: '20px', marginBottom: 12 }}>
-      <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--gold-muted)', marginBottom: 12 }}>
+    <div style={{ padding: '20px', marginBottom: 12, background: CARD_BG, border: CARD_BORDER, borderRadius: 12 }}>
+      <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: '#C8A96E', marginBottom: 12 }}>
         Warning Signs
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -343,7 +288,7 @@ function RedFlagCard({ flags }: { flags: { flag: string; status: string }[] }) {
               }}>
                 {s.icon}
               </span>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-on-light)' }}>{item.flag}</span>
+              <span style={{ fontSize: '0.875rem', color: TEXT }}>{item.flag}</span>
             </div>
           )
         })}
@@ -404,11 +349,11 @@ function ChatBubble({
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
         <div style={{
-          background: 'var(--obsidian)', color: 'var(--text-on-dark)',
+          background: '#141824', color: TEXT,
           borderRadius: '16px 16px 4px 16px',
           padding: '12px 16px', maxWidth: '80%',
           fontSize: '0.9375rem', lineHeight: 1.6,
-          border: '1px solid var(--obsidian-muted)',
+          border: '1px solid rgba(255,255,255,0.1)',
         }}>
           {msg.content}
         </div>
@@ -426,11 +371,13 @@ function ChatBubble({
   }
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
-      <div className="card-clinical" style={{
+      <div style={{
         padding: '12px 16px', maxWidth: '85%',
         fontSize: '0.9375rem', lineHeight: 1.65,
-        color: 'var(--text-on-light)', whiteSpace: 'pre-wrap',
+        color: TEXT, whiteSpace: 'pre-wrap',
         borderRadius: '4px 16px 16px 16px',
+        background: CARD_BG,
+        border: CARD_BORDER,
       }}>
         {msg.content.replace(/\*\*/g, '')}
       </div>
@@ -596,33 +543,36 @@ export default function ResultsPage() {
   const urgencyCfg = URGENCY[currentUrgency] || URGENCY.CONTACT_DOCTOR_TODAY
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <main style={{ minHeight: '100vh', background: '#080C14', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Nav ── */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 24px', flexShrink: 0,
-        borderBottom: '1px solid var(--cream-border)',
-        background: 'var(--clinical-white)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: '#080C14',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
-            border: '1.5px solid var(--gold-muted)', background: 'var(--gold-dim)',
+            border: '1.5px solid rgba(200,169,110,0.35)', background: 'rgba(200,169,110,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <ActivityLogIcon style={{ color: 'var(--gold)', width: 13, height: 13 }} />
+            <ActivityLogIcon style={{ color: '#C8A96E', width: 13, height: 13 }} />
           </div>
-          <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: 'var(--text-on-light)' }}>
-            OrixLink <span style={{ color: 'var(--gold)' }}>AI</span>
+          <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: TEXT }}>
+            OrixLink <span style={{ color: '#C8A96E' }}>AI</span>
           </span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <HeaderAuth variant="light" />
-          <div className={urgencyCfg.cssClass} style={{
+          <HeaderAuth variant="dark" />
+          <div style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '5px 12px', borderRadius: 100, fontSize: '0.75rem', fontWeight: 600,
             fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+            background: urgencyCfg.badgeBg,
+            border: `1px solid ${urgencyCfg.badgeBorder}`,
+            color: urgencyCfg.badgeText,
           }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: urgencyCfg.dotColor, flexShrink: 0 }} />
             {urgencyCfg.label}
@@ -634,7 +584,15 @@ export default function ResultsPage() {
               sessionStorage.removeItem('orixlink_assessment_draft')
             }}
           >
-            <button className="btn-ghost-gold" style={{ padding: '7px 16px', fontSize: '0.8125rem' }}>
+            <button
+              type="button"
+              style={{
+                padding: '7px 16px', fontSize: '0.8125rem', fontWeight: 600,
+                background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: '#C8A96E',
+                borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--font-body), sans-serif',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
               New Assessment <ArrowRightIcon style={{ width: 12, height: 12 }} />
             </button>
           </Link>
@@ -711,8 +669,8 @@ export default function ResultsPage() {
           ))}
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
-              <div className="card-clinical" style={{ padding: '12px 20px', borderRadius: '4px 16px 16px 16px' }}>
-                <div className="skeleton" style={{ width: 120, height: 14 }} />
+              <div style={{ padding: '12px 20px', borderRadius: '4px 16px 16px 16px', background: CARD_BG, border: CARD_BORDER }}>
+                <div className="skeleton" style={{ width: 120, height: 14, background: 'rgba(255,255,255,0.08)' }} />
               </div>
             </div>
           )}
@@ -722,7 +680,7 @@ export default function ResultsPage() {
         {/* Follow-up chips */}
         {followUps.length > 0 && !loading && (
           <div style={{ paddingBottom: 12, flexShrink: 0 }}>
-            <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted-light)', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: MUTED, letterSpacing: '0.08em', marginBottom: 8 }}>
               TAP TO ADD TO ASSESSMENT
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -732,20 +690,20 @@ export default function ResultsPage() {
                   onClick={() => send(p)}
                   style={{
                     padding: '7px 14px', borderRadius: 100, fontSize: '0.8125rem',
-                    border: '1px solid var(--cream-border)',
-                    background: 'var(--clinical-white)',
-                    color: 'var(--text-on-light)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: '#141824',
+                    color: TEXT,
                     cursor: 'pointer', transition: 'all 0.2s',
                     display: 'inline-flex', alignItems: 'center',
                     width: 'fit-content', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={(e) => {
-                    (e.target as HTMLButtonElement).style.borderColor = 'var(--gold)'
-                    ;(e.target as HTMLButtonElement).style.color = 'var(--gold)'
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(200,169,110,0.5)'
+                    ;(e.target as HTMLButtonElement).style.color = '#C8A96E'
                   }}
                   onMouseLeave={(e) => {
-                    (e.target as HTMLButtonElement).style.borderColor = 'var(--cream-border)'
-                    ;(e.target as HTMLButtonElement).style.color = 'var(--text-on-light)'
+                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'
+                    ;(e.target as HTMLButtonElement).style.color = TEXT
                   }}
                 >
                   {p}
@@ -758,7 +716,7 @@ export default function ResultsPage() {
         {/* Input bar */}
         <div style={{
           display: 'flex', gap: 10, paddingBottom: 16, paddingTop: 8, flexShrink: 0,
-          borderTop: '1px solid var(--cream-border)',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
         }}>
           <input
             type="text"
@@ -766,24 +724,30 @@ export default function ResultsPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send(input)}
             placeholder="Add a symptom, ask a question, or say what happened next..."
-            className="input-clinical"
-            style={{ flex: 1, borderRadius: 10 }}
+            style={{
+              flex: 1, borderRadius: 8, padding: '10px 14px',
+              background: '#141824', border: '1px solid rgba(255,255,255,0.1)', color: TEXT,
+              fontSize: '0.9375rem', fontFamily: 'var(--font-body), sans-serif', outline: 'none',
+            }}
+            onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)' }}
+            onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
           />
           <button
+            type="button"
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
-            className="btn-gold"
             style={{
-              padding: '12px 18px', borderRadius: 10, flexShrink: 0,
+              padding: '12px 18px', borderRadius: 8, flexShrink: 0,
               opacity: input.trim() && !loading ? 1 : 0.4,
               cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+              background: '#C8A96E', color: '#080C14', fontWeight: 600, border: 'none',
             }}
           >
             <PaperPlaneIcon style={{ width: 16, height: 16 }} />
           </button>
         </div>
 
-        <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted-light)', textAlign: 'center', paddingBottom: 16, lineHeight: 1.5 }}>
+        <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: MUTED, textAlign: 'center', paddingBottom: 16, lineHeight: 1.5 }}>
           Nothing is final — OrixLink updates its assessment as new information arrives
         </p>
       </div>
@@ -791,14 +755,15 @@ export default function ResultsPage() {
       {/* ── Floating share button ── */}
       {latestAssessment && (
         <button
+          type="button"
           onClick={() => setShowShare(true)}
-          className="btn-gold"
           style={{
             position: 'fixed', bottom: 28, right: 24, zIndex: 40,
             borderRadius: 100, padding: '12px 20px',
-            boxShadow: '0 4px 24px rgba(200,169,110,0.3), 0 2px 8px rgba(0,0,0,0.12)',
+            boxShadow: '0 4px 24px rgba(200,169,110,0.25), 0 2px 8px rgba(0,0,0,0.35)',
             display: 'flex', alignItems: 'center', gap: 8,
             fontSize: '0.875rem',
+            background: '#C8A96E', color: '#080C14', fontWeight: 600, border: 'none', cursor: 'pointer',
           }}
         >
           <Share1Icon style={{ width: 16, height: 16 }} />
@@ -822,27 +787,30 @@ export default function ResultsPage() {
           {/* Modal */}
           <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 51,
-            background: 'var(--clinical-white)',
+            background: CARD_BG,
             borderRadius: '20px 20px 0 0',
             padding: '28px 24px 40px',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.15)',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.45)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderBottom: 'none',
           }}>
             {/* Handle */}
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--cream-border)', margin: '0 auto 24px' }} />
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.12)', margin: '0 auto 24px' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h2 className="font-display" style={{ fontSize: '1.5rem', fontWeight: 400, fontStyle: 'italic', color: 'var(--text-on-light)' }}>
+              <h2 className="font-display" style={{ fontSize: '1.5rem', fontWeight: 400, fontStyle: 'italic', color: TEXT }}>
                 Share Assessment
               </h2>
               <button
+                type="button"
                 onClick={() => setShowShare(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted-light)', padding: 4 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 4 }}
               >
                 <Cross2Icon style={{ width: 18, height: 18 }} />
               </button>
             </div>
 
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted-light)', marginBottom: 24, fontWeight: 300 }}>
+            <p style={{ fontSize: '0.875rem', color: MUTED, marginBottom: 24, fontWeight: 300 }}>
               Share your assessment with a doctor, nurse, or loved one.
             </p>
 
@@ -850,28 +818,29 @@ export default function ResultsPage() {
 
               {/* Copy to clipboard */}
               <button
+                type="button"
                 onClick={handleCopy}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 16,
                   padding: '18px 20px', borderRadius: 12, textAlign: 'left',
-                  border: `1.5px solid ${copied ? 'var(--gold)' : 'var(--cream-border)'}`,
-                  background: copied ? 'var(--gold-dim)' : 'var(--cream-warm)',
+                  border: copied ? '1.5px solid #C8A96E' : CARD_BORDER,
+                  background: copied ? 'rgba(200,169,110,0.12)' : '#141824',
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
                 <div style={{
                   width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                  border: '1px solid var(--gold-muted)', background: 'var(--gold-dim)',
+                  border: '1px solid rgba(200,169,110,0.35)', background: 'rgba(200,169,110,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--gold)',
+                  color: '#C8A96E',
                 }}>
                   {copied ? <CheckIcon style={{ width: 18, height: 18 }} /> : <CopyIcon style={{ width: 18, height: 18 }} />}
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-on-light)', marginBottom: 2 }}>
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: TEXT, marginBottom: 2 }}>
                     {copied ? 'Copied!' : 'Copy to clipboard'}
                   </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted-light)', fontWeight: 300 }}>
+                  <div style={{ fontSize: '0.8125rem', color: MUTED, fontWeight: 300 }}>
                     Paste into a text, email, or message
                   </div>
                 </div>
@@ -879,28 +848,29 @@ export default function ResultsPage() {
 
               {/* Print / Save PDF */}
               <button
+                type="button"
                 onClick={handlePrint}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 16,
                   padding: '18px 20px', borderRadius: 12, textAlign: 'left',
-                  border: '1.5px solid var(--cream-border)',
-                  background: 'var(--cream-warm)',
+                  border: CARD_BORDER,
+                  background: '#141824',
                   cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
                 <div style={{
                   width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                  border: '1px solid var(--gold-muted)', background: 'var(--gold-dim)',
+                  border: '1px solid rgba(200,169,110,0.35)', background: 'rgba(200,169,110,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--gold)',
+                  color: '#C8A96E',
                 }}>
                   <FileTextIcon style={{ width: 18, height: 18 }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-on-light)', marginBottom: 2 }}>
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: TEXT, marginBottom: 2 }}>
                     Print or save as PDF
                   </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted-light)', fontWeight: 300 }}>
+                  <div style={{ fontSize: '0.8125rem', color: MUTED, fontWeight: 300 }}>
                     Formatted summary for doctor visits
                   </div>
                 </div>

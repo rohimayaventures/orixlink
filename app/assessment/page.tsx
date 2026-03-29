@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
 import HeaderAuth from '@/components/HeaderAuth'
@@ -219,46 +219,53 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
     }
   }
 
-  const inputStyle = {
+  const BG_PAGE = '#080C14'
+  const BG_FORM = '#0D1220'
+  const BORDER_FORM = '1px solid rgba(255,255,255,0.07)'
+  const TEXT = '#F4EFE6'
+  const MUTED = 'rgba(244,239,230,0.5)'
+  const GOLD = '#C8A96E'
+
+  const inputStyle: CSSProperties = {
     width: '100%',
-    padding: '12px 16px',
-    background: 'var(--cream-warm)',
-    border: '1.5px solid var(--cream-border)',
+    padding: '10px 14px',
+    background: '#141824',
+    border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 8,
     fontFamily: 'var(--font-body)',
     fontSize: '0.9375rem',
-    color: 'var(--text-on-light)',
+    color: TEXT,
     outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
+    transition: 'border-color 0.2s',
   }
 
-  const labelStyle = {
+  const labelStyle: CSSProperties = {
     display: 'block',
     fontSize: '0.6875rem',
     fontFamily: 'var(--font-mono)',
     letterSpacing: '0.1em',
     textTransform: 'uppercase' as const,
-    color: 'var(--text-muted-light)',
+    color: MUTED,
     marginBottom: '0.5rem',
   }
 
   if (anonGate) {
     return (
-      <main style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ minHeight: '100vh', background: BG_PAGE, display: 'flex', flexDirection: 'column' }}>
         <nav style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 24px',
-          borderBottom: '1px solid var(--cream-border)',
-          background: 'var(--clinical-white)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          background: BG_PAGE,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <ActivityLogIcon style={{ color: 'var(--gold)', width: 20, height: 20 }} />
-            <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: 'var(--text-on-light)' }}>
-              OrixLink <span style={{ color: 'var(--gold)' }}>AI</span>
+            <ActivityLogIcon style={{ color: GOLD, width: 20, height: 20 }} />
+            <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: TEXT }}>
+              OrixLink <span style={{ color: GOLD }}>AI</span>
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <HeaderAuth variant="light" />
+            <HeaderAuth variant="dark" />
             <button
               type="button"
               onClick={handleStartOver}
@@ -266,7 +273,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: 'var(--gold)',
+                color: GOLD,
                 fontSize: '0.8125rem',
                 fontFamily: 'var(--font-body), sans-serif',
                 textDecoration: 'underline',
@@ -284,7 +291,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--text-muted-light)', fontSize: '0.8125rem',
+                color: MUTED, fontSize: '0.8125rem',
                 padding: '6px 10px', borderRadius: 6,
               }}
             >
@@ -297,54 +304,59 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           padding: '2rem', textAlign: 'center', maxWidth: 440, margin: '0 auto',
         }}>
-          <h1 className="font-display" style={{ fontSize: '1.75rem', marginBottom: '1rem', color: 'var(--text-on-light)' }}>
-            Sign in to run another assessment
-          </h1>
-          <p style={{ color: 'var(--text-muted-light)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-            You have used your free anonymous assessment. Sign in to save results and continue with your included assessments.
-          </p>
-          <button type="button" className="btn-gold" onClick={openAuthModal} style={{ marginBottom: 12 }}>
-            Sign in or create account
-          </button>
-          <button
-            type="button"
-            className="btn-ghost-gold"
-            onClick={() => {
-              clearAssessmentDraft()
-              router.push('/')
-            }}
-          >
-            Back to home
-          </button>
+          <div style={{ background: BG_FORM, border: BORDER_FORM, borderRadius: 12, padding: '2rem', width: '100%' }}>
+            <h1 className="font-display" style={{ fontSize: '1.75rem', marginBottom: '1rem', color: TEXT }}>
+              Sign in to run another assessment
+            </h1>
+            <p style={{ color: MUTED, marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              You have used your free anonymous assessment. Sign in to save results and continue with your included assessments.
+            </p>
+            <button type="button" onClick={openAuthModal} style={{ marginBottom: 12, width: '100%', padding: '14px 20px', borderRadius: 8, background: GOLD, color: BG_PAGE, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+              Sign in or create account
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearAssessmentDraft()
+                router.push('/')
+              }}
+              style={{
+                width: '100%', padding: '12px 20px', borderRadius: 8,
+                background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: GOLD, cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              Back to home
+            </button>
+          </div>
         </div>
       </main>
     )
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--cream)', display: 'flex', flexDirection: 'column' }}>
+    <main style={{ minHeight: '100vh', background: BG_PAGE, display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Nav ── */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 24px',
-        borderBottom: '1px solid var(--cream-border)',
-        background: 'var(--clinical-white)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: BG_PAGE,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 30, height: 30, borderRadius: '50%',
-            border: '1.5px solid var(--gold-muted)', background: 'var(--gold-dim)',
+            border: '1.5px solid rgba(200,169,110,0.35)', background: 'rgba(200,169,110,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <ActivityLogIcon style={{ color: 'var(--gold)', width: 13, height: 13 }} />
+            <ActivityLogIcon style={{ color: GOLD, width: 13, height: 13 }} />
           </div>
-          <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: 'var(--text-on-light)' }}>
-            OrixLink <span style={{ color: 'var(--gold)' }}>AI</span>
+          <span className="font-display" style={{ fontSize: '1.0625rem', fontWeight: 500, color: TEXT }}>
+            OrixLink <span style={{ color: GOLD }}>AI</span>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <HeaderAuth variant="light" />
+          <HeaderAuth variant="dark" />
           <button
             type="button"
             onClick={handleStartOver}
@@ -352,7 +364,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--gold)',
+              color: GOLD,
               fontSize: '0.8125rem',
               fontFamily: 'var(--font-body), sans-serif',
               textDecoration: 'underline',
@@ -370,7 +382,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--text-muted-light)', fontSize: '0.8125rem',
+              color: MUTED, fontSize: '0.8125rem',
               padding: '6px 10px', borderRadius: 6,
             }}
           >
@@ -381,11 +393,12 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
       </nav>
 
       {/* ── Gold progress bar ── */}
-      <div style={{ height: 3, background: 'var(--cream-border)', position: 'relative' }}>
+      <div style={{ height: 6, background: 'rgba(255,255,255,0.07)', position: 'relative' }}>
         <div style={{
           position: 'absolute', left: 0, top: 0, height: '100%',
           width: `${(step / 3) * 100}%`,
-          background: 'var(--gold)',
+          background: GOLD,
+          borderRadius: 4,
           transition: 'width 0.5s cubic-bezier(0.23,1,0.32,1)',
         }} />
       </div>
@@ -396,14 +409,14 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
         alignItems: 'center', justifyContent: 'center',
         padding: '40px 24px 80px',
       }}>
-        <div style={{ width: '100%', maxWidth: 600 }}>
+        <div style={{ width: '100%', maxWidth: 600, background: BG_FORM, border: BORDER_FORM, borderRadius: 12, padding: '28px 24px 32px' }}>
 
           {/* Step dots */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '2rem' }}>
             {[1, 2, 3].map((s) => (
               <div key={s} className={`step-dot ${s === step ? 'active' : s < step ? 'complete' : ''}`} />
             ))}
-            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted-light)', letterSpacing: '0.08em', marginLeft: 4 }}>
+            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'rgba(244,239,230,0.5)', letterSpacing: '0.08em', marginLeft: 4 }}>
               Step {step} of 3
             </span>
           </div>
@@ -411,10 +424,10 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
           {/* ── STEP 1 — Role ── */}
           {step === 1 && (
             <div className="animate-fade-up">
-              <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 400, fontStyle: 'italic', color: 'var(--text-on-light)', marginBottom: '0.5rem', lineHeight: 1.15 }}>
+              <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 400, fontStyle: 'italic', color: '#F4EFE6', marginBottom: '0.5rem', lineHeight: 1.15 }}>
                 Who is asking?
               </h1>
-              <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted-light)', marginBottom: '2rem', fontWeight: 300 }}>
+              <p style={{ fontSize: '0.9375rem', color: 'rgba(244,239,230,0.5)', marginBottom: '2rem', fontWeight: 300 }}>
                 OrixLink adapts its language and depth to you.
               </p>
 
@@ -426,27 +439,26 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     style={{
                       display: 'flex', alignItems: 'center', gap: 16,
                       padding: '18px 20px', borderRadius: 10, textAlign: 'left',
-                      border: `1.5px solid ${role === r.id ? 'var(--gold)' : 'var(--cream-border)'}`,
-                      background: role === r.id ? 'var(--gold-dim)' : 'var(--clinical-white)',
+                      border: `1px solid ${role === r.id ? GOLD : 'rgba(255,255,255,0.1)'}`,
+                      background: role === r.id ? 'rgba(200,169,110,0.1)' : '#141824',
                       cursor: 'pointer',
-                      boxShadow: role === r.id ? 'var(--shadow-gold)' : 'none',
                       transition: 'all 0.2s var(--ease-smooth)',
                     }}
                   >
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                      border: `1px solid ${role === r.id ? 'var(--gold)' : 'var(--cream-border)'}`,
-                      background: role === r.id ? 'rgba(200,169,110,0.15)' : 'var(--clinical-grey)',
+                      border: `1px solid ${role === r.id ? GOLD : 'rgba(255,255,255,0.1)'}`,
+                      background: role === r.id ? 'rgba(200,169,110,0.12)' : 'rgba(255,255,255,0.04)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <PersonIcon style={{ width: 15, height: 15, color: role === r.id ? 'var(--gold)' : 'var(--text-muted-light)' }} />
+                      <PersonIcon style={{ width: 15, height: 15, color: role === r.id ? GOLD : 'rgba(244,239,230,0.5)' }} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-on-light)', marginBottom: 2 }}>{r.label}</div>
-                      <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted-light)', fontWeight: 300 }}>{r.desc}</div>
+                      <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#F4EFE6', marginBottom: 2 }}>{r.label}</div>
+                      <div style={{ fontSize: '0.8125rem', color: 'rgba(244,239,230,0.5)', fontWeight: 300 }}>{r.desc}</div>
                     </div>
                     {role === r.id && (
-                      <div style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
+                      <div style={{ marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%', background: GOLD, flexShrink: 0 }} />
                     )}
                   </button>
                 ))}
@@ -456,7 +468,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 <label htmlFor="orixlink-output-language" style={labelStyle}>
                   Response language ({LANGUAGES.length} languages)
                 </label>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted-light)', marginBottom: '0.5rem', fontWeight: 300, lineHeight: 1.5 }}>
+                <p style={{ fontSize: '0.8125rem', color: 'rgba(244,239,230,0.5)', marginBottom: '0.5rem', fontWeight: 300, lineHeight: 1.5 }}>
                   Same list for every role — patient, family or caregiver, or medical professional. OrixLink writes the assessment in the language you pick (clinical depth and terminology still follow the role you selected). App screens stay in English. Some languages show an extra accuracy notice; emergency-level results also show a fixed English line when the response language is moderate or low confidence.
                 </p>
                 <select
@@ -495,10 +507,14 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               </div>
 
               <button
+                type="button"
                 onClick={() => setStep(2)}
                 disabled={!canProceedStep1}
-                className="btn-gold"
-                style={{ width: '100%', opacity: canProceedStep1 ? 1 : 0.4, cursor: canProceedStep1 ? 'pointer' : 'not-allowed' }}
+                style={{
+                  width: '100%', opacity: canProceedStep1 ? 1 : 0.4, cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
+                  padding: '14px 20px', borderRadius: 8, border: 'none', fontWeight: 600,
+                  background: GOLD, color: BG_PAGE, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
               >
                 Continue <ArrowRightIcon style={{ width: 16, height: 16 }} />
               </button>
@@ -508,10 +524,10 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
           {/* ── STEP 2 — Context ── */}
           {step === 2 && (
             <div className="animate-fade-up">
-              <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 400, fontStyle: 'italic', color: 'var(--text-on-light)', marginBottom: '0.5rem', lineHeight: 1.15 }}>
+              <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 400, fontStyle: 'italic', color: '#F4EFE6', marginBottom: '0.5rem', lineHeight: 1.15 }}>
                 What best describes the situation?
               </h1>
-              <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted-light)', marginBottom: '2rem', fontWeight: 300 }}>
+              <p style={{ fontSize: '0.9375rem', color: 'rgba(244,239,230,0.5)', marginBottom: '2rem', fontWeight: 300 }}>
                 Choose the closest match. Nothing is excluded.
               </p>
 
@@ -522,15 +538,14 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     onClick={() => setContext(c.id)}
                     style={{
                       padding: '16px 18px', borderRadius: 10, textAlign: 'left',
-                      border: `1.5px solid ${context === c.id ? 'var(--gold)' : 'var(--cream-border)'}`,
-                      background: context === c.id ? 'var(--gold-dim)' : 'var(--clinical-white)',
+                      border: `1px solid ${context === c.id ? GOLD : 'rgba(255,255,255,0.1)'}`,
+                      background: context === c.id ? 'rgba(200,169,110,0.1)' : '#141824',
                       cursor: 'pointer',
-                      boxShadow: context === c.id ? 'var(--shadow-gold)' : 'none',
                       transition: 'all 0.2s var(--ease-smooth)',
                     }}
                   >
-                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-on-light)', marginBottom: 3 }}>{c.label}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted-light)', fontWeight: 300 }}>{c.sub}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#F4EFE6', marginBottom: 3 }}>{c.label}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'rgba(244,239,230,0.5)', fontWeight: 300 }}>{c.sub}</div>
                   </button>
                 ))}
               </div>
@@ -554,25 +569,33 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                       'e.g. 34 weeks'
                     }
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(200,169,110,0.12)' }}
-                    onBlur={(e) => { e.target.style.borderColor = 'var(--cream-border)'; e.target.style.boxShadow = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
+                  type="button"
                   onClick={() => setStep(1)}
-                  className="btn-ghost-gold"
-                  style={{ flexShrink: 0 }}
+                  style={{
+                    flexShrink: 0, padding: '12px 18px', borderRadius: 8, fontWeight: 600,
+                    background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: GOLD,
+                    display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                  }}
                 >
                   <ArrowLeftIcon style={{ width: 14, height: 14 }} /> Back
                 </button>
                 <button
+                  type="button"
                   onClick={() => setStep(3)}
                   disabled={!canProceedStep2}
-                  className="btn-gold"
-                  style={{ flex: 1, opacity: canProceedStep2 ? 1 : 0.4, cursor: canProceedStep2 ? 'pointer' : 'not-allowed' }}
+                  style={{
+                    flex: 1, opacity: canProceedStep2 ? 1 : 0.4, cursor: canProceedStep2 ? 'pointer' : 'not-allowed',
+                    padding: '14px 20px', borderRadius: 8, border: 'none', fontWeight: 600,
+                    background: GOLD, color: BG_PAGE, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
                 >
                   Continue <ArrowRightIcon style={{ width: 16, height: 16 }} />
                 </button>
@@ -583,40 +606,40 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
           {/* ── STEP 3 — Symptoms ── */}
           {step === 3 && (
             <div className="animate-fade-up">
-              <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 400, fontStyle: 'italic', color: 'var(--text-on-light)', marginBottom: '0.5rem', lineHeight: 1.15 }}>
+              <h1 className="font-display" style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 400, fontStyle: 'italic', color: '#F4EFE6', marginBottom: '0.5rem', lineHeight: 1.15 }}>
                 Describe what is happening.
               </h1>
-              <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted-light)', marginBottom: '2rem', fontWeight: 300 }}>
+              <p style={{ fontSize: '0.9375rem', color: 'rgba(244,239,230,0.5)', marginBottom: '2rem', fontWeight: 300 }}>
                 Use your own words. No medical knowledge required.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: '1.5rem' }}>
 
                 <div>
-                  <label style={labelStyle}>Patient age and sex <span style={{ color: 'var(--urgent-high)' }}>*</span></label>
+                  <label style={labelStyle}>Patient age and sex <span style={{ color: '#F87171' }}>*</span></label>
                   <input
                     type="text"
                     value={patientAge}
                     onChange={(e) => setPatientAge(e.target.value)}
                     placeholder="e.g. 38-year-old male"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(200,169,110,0.12)' }}
-                    onBlur={(e) => { e.target.style.borderColor = 'var(--cream-border)'; e.target.style.boxShadow = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Symptoms <span style={{ color: 'var(--urgent-high)' }}>*</span></label>
+                  <label style={labelStyle}>Symptoms <span style={{ color: '#F87171' }}>*</span></label>
                   <textarea
                     value={symptoms}
                     onChange={(e) => setSymptoms(e.target.value)}
                     placeholder="Describe what you are seeing or feeling. Location, severity, onset. The more detail the better."
                     rows={5}
                     style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.65 }}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(200,169,110,0.12)' }}
-                    onBlur={(e) => { e.target.style.borderColor = 'var(--cream-border)'; e.target.style.boxShadow = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted-light)', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(244,239,230,0.5)', fontFamily: 'var(--font-mono)' }}>
                     {symptoms.length} characters
                   </span>
                 </div>
@@ -629,40 +652,43 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                     onChange={(e) => setDuration(e.target.value)}
                     placeholder="e.g. 3 days, worsening since yesterday"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(200,169,110,0.12)' }}
-                    onBlur={(e) => { e.target.style.borderColor = 'var(--cream-border)'; e.target.style.boxShadow = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Anything making it better or worse <span style={{ color: 'var(--text-muted-light)', fontStyle: 'italic' }}>(optional)</span></label>
+                  <label style={labelStyle}>Anything making it better or worse <span style={{ color: 'rgba(244,239,230,0.5)', fontStyle: 'italic' }}>(optional)</span></label>
                   <input
                     type="text"
                     value={modifiers}
                     onChange={(e) => setModifiers(e.target.value)}
                     placeholder="e.g. Worse when hanging down, better when elevated"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(200,169,110,0.12)' }}
-                    onBlur={(e) => { e.target.style.borderColor = 'var(--cream-border)'; e.target.style.boxShadow = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Current medications <span style={{ color: 'var(--text-muted-light)', fontStyle: 'italic' }}>(optional)</span></label>
+                  <label style={labelStyle}>Current medications <span style={{ color: 'rgba(244,239,230,0.5)', fontStyle: 'italic' }}>(optional)</span></label>
                   <input
                     type="text"
                     value={medications}
                     onChange={(e) => setMedications(e.target.value)}
                     placeholder="e.g. Aspirin, Plavix, metoprolol"
                     style={inputStyle}
-                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; e.target.style.boxShadow = '0 0 0 3px rgba(200,169,110,0.12)' }}
-                    onBlur={(e) => { e.target.style.borderColor = 'var(--cream-border)'; e.target.style.boxShadow = 'none' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'rgba(200,169,110,0.5)'; e.target.style.outline = 'none' }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
                   />
                 </div>
               </div>
 
               {/* Emergency notice */}
-              <div className="urgency-critical" style={{ padding: '12px 16px', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5, marginBottom: '1.5rem' }}>
+              <div style={{
+                padding: '12px 16px', borderRadius: 8, fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.5, marginBottom: '1.5rem',
+                background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#FCA5A5',
+              }}>
                 <strong>Life-threatening emergency?</strong> Chest pain, difficulty breathing, stroke symptoms — call 911 immediately.
               </div>
 
@@ -675,31 +701,39 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
               )}
 
               {error && (
-                <div style={{ background: 'var(--urgent-critical-bg)', border: '1px solid var(--urgent-critical)', color: 'var(--urgent-critical)', padding: '12px 16px', borderRadius: 8, fontSize: '0.875rem', marginBottom: '1rem' }}>
+                <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.45)', color: '#FCA5A5', padding: '12px 16px', borderRadius: 8, fontSize: '0.875rem', marginBottom: '1rem' }}>
                   {error}
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
+                  type="button"
                   onClick={() => setStep(2)}
-                  className="btn-ghost-gold"
-                  style={{ flexShrink: 0 }}
+                  style={{
+                    flexShrink: 0, padding: '12px 18px', borderRadius: 8, fontWeight: 600,
+                    background: 'transparent', border: '1px solid rgba(200,169,110,0.4)', color: GOLD,
+                    display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                  }}
                 >
                   <ArrowLeftIcon style={{ width: 14, height: 14 }} /> Back
                 </button>
                 <button
+                  type="button"
                   onClick={handleSubmit}
                   disabled={!canSubmit || loading}
-                  className="btn-gold"
-                  style={{ flex: 1, opacity: canSubmit && !loading ? 1 : 0.4, cursor: canSubmit && !loading ? 'pointer' : 'not-allowed' }}
+                  style={{
+                    flex: 1, opacity: canSubmit && !loading ? 1 : 0.4, cursor: canSubmit && !loading ? 'pointer' : 'not-allowed',
+                    padding: '14px 20px', borderRadius: 8, border: 'none', fontWeight: 600,
+                    background: GOLD, color: BG_PAGE, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
                 >
                   {loading ? 'Running assessment...' : 'Run OrixLink Assessment'}
                   {!loading && <ArrowRightIcon style={{ width: 16, height: 16 }} />}
                 </button>
               </div>
 
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted-light)', fontFamily: 'var(--font-mono)', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(244,239,230,0.5)', fontFamily: 'var(--font-mono)', textAlign: 'center', marginTop: '1rem', lineHeight: 1.5 }}>
                 OrixLink provides clinical support only. Not a diagnosis. Emergency? Call 911.
               </p>
             </div>

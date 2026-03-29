@@ -46,9 +46,9 @@ export default function CapReachedPrompt({
         padding: "24px",
         marginBottom: 16,
         borderRadius: 12,
-        border: "1px solid rgba(200, 169, 110, 0.35)",
-        background: "var(--clinical-white)",
-        boxShadow: "var(--shadow-card)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        background: "#0D1220",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
       }}
     >
       <p
@@ -56,7 +56,7 @@ export default function CapReachedPrompt({
         style={{
           fontSize: "1.25rem",
           fontWeight: 500,
-          color: "var(--text-on-light)",
+          color: "#F4EFE6",
           marginBottom: 12,
           lineHeight: 1.35,
         }}
@@ -66,7 +66,7 @@ export default function CapReachedPrompt({
       <p
         style={{
           fontSize: "0.9rem",
-          color: "var(--text-muted-light)",
+          color: "rgba(244,239,230,0.5)",
           lineHeight: 1.6,
           marginBottom: 20,
           fontFamily: "var(--font-body), sans-serif",
@@ -111,7 +111,7 @@ export default function CapReachedPrompt({
             fontFamily: "var(--font-body), sans-serif",
             borderWidth: "1.5px",
             borderColor: GOLD,
-            color: "var(--text-on-light)",
+            color: "#F4EFE6",
             textDecoration: "none",
           }}
         >

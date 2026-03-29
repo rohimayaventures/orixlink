@@ -27,6 +27,7 @@ function AuthSignUpInner() {
   const [tier, setTier] = useState<Tier>("free");
   const [billing, setBilling] = useState<"annual" | "monthly">("annual");
   const [phase, setPhase] = useState<Phase>("idle");
+  const [checkoutError, setCheckoutError] = useState(false);
   const checkoutStarted = useRef(false);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ function AuthSignUpInner() {
     const key = priceKeyFor(tier, billing);
     if (!key) return;
     checkoutStarted.current = true;
+    setCheckoutError(false);
     let cancelled = false;
     (async () => {
       try {
@@ -69,17 +71,37 @@ function AuthSignUpInner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "subscription", priceKey: key }),
         });
-        const data = await res.json();
+        let data: { url?: string; error?: string } = {};
+        try {
+          data = await res.json();
+        } catch (parseErr) {
+          console.error("Checkout session creation failed:", parseErr);
+          if (!cancelled) {
+            checkoutStarted.current = false;
+            setCheckoutError(true);
+            setPhase("idle");
+          }
+          return;
+        }
         if (cancelled) return;
         if (data.url) {
           window.location.href = data.url;
           return;
         }
+        console.error("Checkout session creation failed:", {
+          status: res.status,
+          body: data,
+        });
         checkoutStarted.current = false;
+        setCheckoutError(true);
         setPhase("idle");
-      } catch {
-        checkoutStarted.current = false;
-        setPhase("idle");
+      } catch (error) {
+        console.error("Checkout session creation failed:", error);
+        if (!cancelled) {
+          checkoutStarted.current = false;
+          setCheckoutError(true);
+          setPhase("idle");
+        }
       }
     })();
     return () => {
@@ -88,6 +110,7 @@ function AuthSignUpInner() {
   }, [phase, user, tier, billing]);
 
   function handleCreateAccount() {
+    setCheckoutError(false);
     setPhase("awaiting-auth");
     openAuthModal();
   }
@@ -239,6 +262,36 @@ function AuthSignUpInner() {
             {phase === "checkout" ? "Redirecting to checkout…" : "Create account & continue"}
           </button>
         </div>
+
+        {checkoutError && (
+          <p
+            role="alert"
+            style={{
+              backgroundColor: "rgba(200,169,110,0.08)",
+              border: "1px solid rgba(200,169,110,0.3)",
+              color: "#C8A96E",
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: "13px",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              marginTop: "16px",
+              textAlign: "center",
+            }}
+          >
+            We created your account but could not start checkout. Please go to{" "}
+            <Link
+              href="/pricing"
+              style={{
+                color: "#C8A96E",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              Pricing
+            </Link>{" "}
+            to select your plan.
+          </p>
+        )}
 
         <p className="text-center text-sm" style={{ color: "var(--text-muted-dark)" }}>
           <Link href="/pricing" style={{ color: "var(--gold)" }}>

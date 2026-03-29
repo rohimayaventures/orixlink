@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function LegalOverlay() {
+  const { user, loading } = useAuth();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function LegalOverlay() {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        backgroundColor: "rgba(8,12,20,0.85)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -34,8 +36,9 @@ export default function LegalOverlay() {
     >
       <div
         style={{
-          backgroundColor: "#ffffff",
-          borderRadius: "12px",
+          backgroundColor: "#0D1220",
+          border: "1px solid rgba(200,169,110,0.25)",
+          borderRadius: "14px",
           maxWidth: "520px",
           width: "100%",
           padding: "2rem",
@@ -48,7 +51,7 @@ export default function LegalOverlay() {
             fontWeight: 600,
             textTransform: "uppercase",
             letterSpacing: "0.1em",
-            color: "#888",
+            color: "rgba(244,239,230,0.4)",
             marginBottom: "0.75rem",
           }}
         >
@@ -59,7 +62,7 @@ export default function LegalOverlay() {
           style={{
             fontSize: "20px",
             fontWeight: 500,
-            color: "#0f0f0f",
+            color: "#F4EFE6",
             marginBottom: "1rem",
             lineHeight: 1.3,
           }}
@@ -70,7 +73,7 @@ export default function LegalOverlay() {
         <p
           style={{
             fontSize: "14px",
-            color: "#444",
+            color: "rgba(244,239,230,0.7)",
             lineHeight: 1.7,
             marginBottom: "0.875rem",
           }}
@@ -84,20 +87,34 @@ export default function LegalOverlay() {
         <p
           style={{
             fontSize: "14px",
-            color: "#444",
+            color: "rgba(244,239,230,0.7)",
             lineHeight: 1.7,
             marginBottom: "1.5rem",
           }}
         >
           If you believe you are experiencing a medical emergency, call{" "}
-          <strong style={{ color: "#0f0f0f" }}>911</strong> or go to your
+          <strong style={{ color: "#F4EFE6" }}>911</strong> or go to your
           nearest emergency department immediately. Do not wait for an AI
           assessment.
         </p>
 
+        {!loading && !user && (
+          <p
+            style={{
+              fontSize: "14px",
+              color: "rgba(244,239,230,0.7)",
+              lineHeight: 1.7,
+              marginBottom: "1.5rem",
+            }}
+          >
+            Not signed in? Your assessment stays in this browser tab only and is
+            never stored on our servers.
+          </p>
+        )}
+
         <div
           style={{
-            borderTop: "0.5px solid #e5e5e5",
+            borderTop: "0.5px solid rgba(255,255,255,0.08)",
             paddingTop: "1.25rem",
             display: "flex",
             flexDirection: "column",
@@ -105,15 +122,16 @@ export default function LegalOverlay() {
           }}
         >
           <button
+            type="button"
             onClick={handleAccept}
             style={{
-              backgroundColor: "#0f0f0f",
-              color: "#ffffff",
+              backgroundColor: "#C8A96E",
+              color: "#080C14",
               border: "none",
               borderRadius: "8px",
               padding: "0.875rem 1.5rem",
               fontSize: "14px",
-              fontWeight: 500,
+              fontWeight: 600,
               cursor: "pointer",
               width: "100%",
               fontFamily: "DM Sans, sans-serif",
@@ -125,7 +143,7 @@ export default function LegalOverlay() {
           <p
             style={{
               fontSize: "12px",
-              color: "#999",
+              color: "rgba(244,239,230,0.4)",
               textAlign: "center",
               margin: 0,
             }}
@@ -133,7 +151,7 @@ export default function LegalOverlay() {
             By continuing, you agree to our{" "}
             <a
               href="/legal"
-              style={{ color: "#666", textDecoration: "underline" }}
+              style={{ color: "rgba(244,239,230,0.4)", textDecoration: "underline" }}
             >
               Terms of Use and Privacy Policy
             </a>
