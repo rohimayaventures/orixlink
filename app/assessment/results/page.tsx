@@ -22,6 +22,10 @@ import {
 } from '@/lib/outputLanguages'
 import { useAuth } from '@/components/AuthProvider'
 import HeaderAuth from '@/components/HeaderAuth'
+import {
+  ReminderPrompt,
+  type ReminderUserTier,
+} from '@/components/ReminderPrompt'
 import CapReachedPrompt, {
   type CapReachedPayload,
 } from '@/components/CapReachedPrompt'
@@ -387,7 +391,7 @@ function ChatBubble({
 
 export default function ResultsPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [session, setSession] = useState<Record<string, string>>({})
   const [messages, setMessages] = useState<Message[]>([])
   const [currentUrgency, setCurrentUrgency] = useState('CONTACT_DOCTOR_TODAY')
@@ -402,6 +406,7 @@ export default function ResultsPage() {
   const [apiSessionId, setApiSessionId] = useState<string | null>(null)
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
   const [showHistoryWarning, setShowHistoryWarning] = useState(false)
+  const [userTier, setUserTier] = useState<ReminderUserTier>('free')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -432,6 +437,31 @@ export default function ResultsPage() {
     const t = window.setTimeout(() => setShowHistoryWarning(false), 6000)
     return () => window.clearTimeout(t)
   }, [showHistoryWarning])
+
+  useEffect(() => {
+    if (!user || !supabase) {
+      setUserTier('free')
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('tier, is_lifetime')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (cancelled) return
+      const row = data as { tier?: string; is_lifetime?: boolean } | null
+      const t = row?.tier ?? 'free'
+      if (row?.is_lifetime || t === 'lifetime') setUserTier('lifetime')
+      else if (t === 'family') setUserTier('family')
+      else if (t === 'pro') setUserTier('pro')
+      else setUserTier('free')
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user, supabase])
 
   useEffect(() => {
     if (user || messages.length < 2) return
@@ -753,6 +783,29 @@ export default function ResultsPage() {
           Nothing is final — OrixLink updates its assessment as new information arrives
         </p>
       </div>
+
+      {latestAssessment &&
+        (!user || userTier === 'free' || apiSessionId) && (
+          <div
+            style={{
+              maxWidth: 720,
+              width: '100%',
+              margin: '0 auto',
+              padding: '0 16px 8px',
+            }}
+          >
+            <ReminderPrompt
+              sessionId={apiSessionId ?? ''}
+              chiefComplaint={
+                symptoms ||
+                (typeof session.symptoms === 'string' ? session.symptoms : '') ||
+                'Your recent assessment'
+              }
+              urgencyTier={urgencyCfg.label}
+              userTier={userTier}
+            />
+          </div>
+        )}
 
       {/* ── Floating share button ── */}
       {latestAssessment && (

@@ -291,8 +291,9 @@ export default function LegalPage() {
             <Subheading>How we use your information</Subheading>
             <p style={{ marginBottom: "1rem" }}>
               We use your assessment data solely to provide the OrixLink AI service
-              &mdash; including saving your history and generating PDF exports.
-              Follow-up reminders are coming soon. We do not use your health assessment
+              &mdash; including saving your history, generating PDF exports, and
+              sending optional follow-up email reminders that you explicitly
+              schedule after an assessment. We do not use your health assessment
               data to train AI models.
             </p>
             <p style={{ marginBottom: "1rem" }}>
@@ -309,7 +310,8 @@ export default function LegalPage() {
             <p style={{ marginBottom: "1rem" }}>
               We share data only with the following service providers as necessary to
               operate the product: Supabase (database and authentication), Stripe
-              (billing and payments), Anthropic (AI assessment generation), Vercel
+              (billing and payments), Anthropic (AI assessment generation),
+              Loops (transactional email for reminders you opt into), Vercel
               (hosting and analytics).
             </p>
             <p style={{ marginBottom: "1rem" }}>
