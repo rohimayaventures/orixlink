@@ -1,46 +1,42 @@
-import { NextResponse } from "next/server";
-import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from 'next/server'
+import { stripe } from '@/lib/stripe'
+import { createClient } from '@/lib/supabase/server'
 
-export async function POST() {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
+export async function POST(_request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!subscription?.stripe_customer_id) {
+      return NextResponse.json(
+        { error: 'No billing account found' },
+        { status: 404 }
+      )
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://triage.rohimaya.ai'
+
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripe_customer_id,
+      return_url: `${baseUrl}/account`,
+    })
+
+    return NextResponse.json({ url: portalSession.url })
+  } catch (error) {
+    console.error('Billing portal error:', error)
     return NextResponse.json(
-      { error: "Billing is not configured" },
-      { status: 503 }
-    );
+      { error: 'Failed to create portal session' },
+      { status: 500 }
+    )
   }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("stripe_customer_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const customerId = sub?.stripe_customer_id as string | undefined;
-  if (!customerId) {
-    return NextResponse.json(
-      { error: "No Stripe customer on file" },
-      { status: 400 }
-    );
-  }
-
-  const stripe = new Stripe(secret);
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${siteUrl}/account`,
-  });
-
-  return NextResponse.json({ url: session.url });
 }
