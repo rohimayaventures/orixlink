@@ -32,9 +32,18 @@ function AuthSignUpInner() {
   useEffect(() => {
     if (loading) return;
     if (user && phase === "idle") {
-      router.replace("/account");
+      const redirectTo = searchParams.get("redirect");
+      if (
+        redirectTo &&
+        redirectTo.startsWith("/") &&
+        !redirectTo.startsWith("//")
+      ) {
+        router.replace(redirectTo);
+      } else {
+        router.replace("/account");
+      }
     }
-  }, [loading, user, phase, router]);
+  }, [loading, user, phase, router, searchParams]);
 
   useEffect(() => {
     if (loading || !user) return;

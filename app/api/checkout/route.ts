@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid price key' }, { status: 400 })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://triage.rohimaya.ai'
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://triage.rohimaya.ai')
 
     // Look up or create Stripe customer
     const { data: subscription } = await supabase

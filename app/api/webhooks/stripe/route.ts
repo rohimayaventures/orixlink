@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
         if (isLifetime) {
           await upsertSubscription(userId, {
             tier: 'lifetime',
+            is_lifetime: true,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: null,
             status: 'active',

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import HeaderAuth from "@/components/HeaderAuth";
+import { useAuth } from "@/components/AuthProvider";
 import {
   ActivityLogIcon,
   LockClosedIcon,
@@ -16,18 +17,45 @@ import {
   Cross2Icon,
 } from "@radix-ui/react-icons";
 
-export default function LandingPage() {
+const QUERY_NOTICE_STYLE: CSSProperties = {
+  backgroundColor: "rgba(200,169,110,0.08)",
+  border: "1px solid rgba(200,169,110,0.2)",
+  color: "rgba(244,239,230,0.7)",
+  fontFamily: "DM Sans, sans-serif",
+  fontSize: "13px",
+  padding: "12px 20px",
+  borderRadius: "8px",
+  textAlign: "center",
+  maxWidth: "480px",
+  margin: "0 auto 24px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "12px",
+};
+
+function LandingPageInner() {
   const router = useRouter();
-  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
+  const searchParams = useSearchParams();
+  const { openAuthModal } = useAuth();
+  const [dismissedQueryNotice, setDismissedQueryNotice] = useState(false);
+
+  const authRequired = searchParams.get("auth") === "required";
+  const sessionExpired = searchParams.get("session") === "expired";
+  const showAuthNotice = authRequired && !dismissedQueryNotice;
+  const showSessionNotice =
+    !authRequired && sessionExpired && !dismissedQueryNotice;
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("session") !== "expired") return;
-    setSessionExpiredNotice(true);
+    if (!authRequired || dismissedQueryNotice) return;
+    const id = window.setTimeout(() => openAuthModal(), 400);
+    return () => window.clearTimeout(id);
+  }, [authRequired, dismissedQueryNotice, openAuthModal]);
+
+  function dismissQueryNotice() {
+    setDismissedQueryNotice(true);
     router.replace("/", { scroll: false });
-    const t = window.setTimeout(() => setSessionExpiredNotice(false), 5000);
-    return () => window.clearTimeout(t);
-  }, [router]);
+  }
 
   return (
     <main className="min-h-screen" style={{ background: "var(--obsidian)" }}>
@@ -57,59 +85,60 @@ export default function LandingPage() {
         <HeaderAuth variant="dark" />
       </nav>
 
-      {sessionExpiredNotice && (
-        <div
-          role="status"
-          style={{
-            position: "fixed",
-            top: 80,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 45,
-            maxWidth: "min(92vw, 520px)",
-            width: "min(92vw, 520px)",
-            background: "rgba(200,169,110,0.08)",
-            border: "1px solid rgba(200,169,110,0.2)",
-            color: "rgba(244,239,230,0.7)",
-            fontFamily: "var(--font-body), DM Sans, sans-serif",
-            fontSize: "13px",
-            padding: "12px 20px",
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            boxSizing: "border-box",
-          }}
-        >
-          <p style={{ margin: 0, flex: 1, lineHeight: 1.45 }}>
-            You were signed out due to inactivity. Your health information is protected.
-          </p>
-          <button
-            type="button"
-            aria-label="Dismiss"
-            onClick={() => setSessionExpiredNotice(false)}
-            style={{
-              flexShrink: 0,
-              background: "transparent",
-              border: "none",
-              color: "rgba(244,239,230,0.55)",
-              cursor: "pointer",
-              padding: 4,
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Cross2Icon width={16} height={16} />
-          </button>
-        </div>
-      )}
-
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section style={{
         minHeight: "100vh", display: "flex", flexDirection: "column" as const,
         alignItems: "center", justifyContent: "center", textAlign: "center" as const,
         padding: "120px 24px 80px", position: "relative" as const, overflow: "hidden",
       }}>
+        {showAuthNotice && (
+          <div role="status" style={{ ...QUERY_NOTICE_STYLE, width: "100%", boxSizing: "border-box" }}>
+            <span style={{ flex: 1, lineHeight: 1.45, textAlign: "center" }}>
+              Please sign in to continue. The page you visited requires an account.
+            </span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={dismissQueryNotice}
+              style={{
+                flexShrink: 0,
+                background: "transparent",
+                border: "none",
+                color: "rgba(244,239,230,0.55)",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Cross2Icon width={16} height={16} />
+            </button>
+          </div>
+        )}
+        {showSessionNotice && (
+          <div role="status" style={{ ...QUERY_NOTICE_STYLE, width: "100%", boxSizing: "border-box" }}>
+            <span style={{ flex: 1, lineHeight: 1.45, textAlign: "center" }}>
+              You were signed out due to inactivity. Your health information is protected.
+            </span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={dismissQueryNotice}
+              style={{
+                flexShrink: 0,
+                background: "transparent",
+                border: "none",
+                color: "rgba(244,239,230,0.55)",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Cross2Icon width={16} height={16} />
+            </button>
+          </div>
+        )}
         <div className="animate-orb" style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, -60%)",
@@ -390,5 +419,17 @@ export default function LandingPage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen" style={{ background: "var(--obsidian)" }} />
+      }
+    >
+      <LandingPageInner />
+    </Suspense>
   );
 }
