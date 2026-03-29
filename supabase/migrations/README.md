@@ -5,6 +5,22 @@
 Run migrations in numerical order. Each migration
 has dependency comments at the top of the file.
 
+## Idempotency (fresh DB + production)
+
+All migrations are written to be **safe to re-run**:
+
+- `CREATE TABLE IF NOT EXISTS` for tables that already exist in production
+- `CREATE INDEX IF NOT EXISTS` where indexes are created
+- `ADD COLUMN IF NOT EXISTS` for additive column changes
+- Row-level security policies are created inside `DO $$ ... IF NOT EXISTS (SELECT 1 FROM pg_policies ...)`
+  blocks so duplicate policy names do not error
+- RPCs (`attempt_assessment`, `rollback_assessment`, `consume_one_credit`, etc.) use
+  `CREATE OR REPLACE FUNCTION`
+- Unique constraints and similar objects use `DO $$` checks against `pg_constraint` when needed
+
+Files that bootstrap core tables (001, 002, etc.) include a short banner comment noting that
+production already has those objects and that `IF NOT EXISTS` avoids failures on apply.
+
 ## Key dependencies
 
 - 006 (assessment RPCs) requires 002, 004, and 007
@@ -52,7 +68,11 @@ of your `CRON_SECRET` environment variable.
 ## Production database
 
 The production database at Supabase project
-`wgsczpvubfdgwqtmlzon` has all migrations applied.
-Do not re-run migrations against production.
-New deployments should run migrations in order
-against a fresh database only.
+`wgsczpvubfdgwqtmlzon` reflects the live schema.
+Migrations are aligned for **idempotent** application
+on fresh databases and for **no-op or safe additive**
+behavior when re-applied where objects already exist.
+
+New environments should run migrations in order
+from an empty database, or rely on Supabase migration
+history so each file runs once.

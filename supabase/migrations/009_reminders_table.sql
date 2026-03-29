@@ -1,3 +1,8 @@
+-- Production already has this table.
+-- IF NOT EXISTS makes this safe to run
+-- on a fresh database without failing
+-- on production.
+
 -- Requires: pg_cron and pg_net extensions
 -- Run in Supabase SQL editor before applying:
 --   CREATE EXTENSION IF NOT EXISTS pg_cron;
@@ -27,16 +32,26 @@ CREATE TABLE IF NOT EXISTS public.reminders (
   sent_at timestamptz
 );
 
-CREATE INDEX idx_reminders_send_at
+CREATE INDEX IF NOT EXISTS idx_reminders_send_at
   ON public.reminders(send_at)
   WHERE status = 'pending';
 
-CREATE INDEX idx_reminders_user_id
+CREATE INDEX IF NOT EXISTS idx_reminders_user_id
   ON public.reminders(user_id);
 
 ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can manage own reminders"
-  ON public.reminders FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'reminders'
+      and policyname = 'Users can manage own reminders'
+  ) then
+    CREATE POLICY "Users can manage own reminders"
+      ON public.reminders FOR ALL
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  end if;
+end $$;

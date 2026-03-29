@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import { canManageDependentsTier } from "@/lib/dependents";
+import HistoryDependentFilter from "./HistoryDependentFilter";
 
 const TEXT = "#F4EFE6";
 const MUTED = "rgba(244,239,230,0.5)";
@@ -36,17 +38,67 @@ const URGENCY_ROW: Record<
   },
 };
 
-export default async function HistoryPage() {
+const DEPENDENT_FILTER_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export default async function HistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dependent?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const { data: sessions } = await supabase
-    .from("sessions")
-    .select("id, role, context, created_at, urgency_level")
+  const sp = await searchParams;
+  const rawFilter = sp.dependent ?? "all";
+
+  const { data: subRow } = await supabase
+    .from("subscriptions")
+    .select("tier, status")
     .eq("user_id", user.id)
+    .maybeSingle();
+
+  const subStatusLower = (subRow?.status ?? "").toLowerCase();
+  const dependentsEligible =
+    subRow != null &&
+    canManageDependentsTier(subRow.tier) &&
+    (subStatusLower === "active" || subStatusLower === "trialing");
+
+  let dependentList: { id: string; display_name: string }[] = [];
+  if (dependentsEligible) {
+    const { data: deps } = await supabase
+      .from("dependents")
+      .select("id, display_name")
+      .eq("owner_user_id", user.id)
+      .order("created_at", { ascending: true });
+    dependentList = deps ?? [];
+  }
+
+  let dependentFilter = rawFilter;
+  if (
+    dependentFilter !== "all" &&
+    dependentFilter !== "mine" &&
+    (!DEPENDENT_FILTER_UUID.test(dependentFilter) ||
+      !dependentList.some((d) => d.id === dependentFilter))
+  ) {
+    dependentFilter = "all";
+  }
+
+  let sessionsQuery = supabase
+    .from("sessions")
+    .select("id, role, context, created_at, urgency_level, dependent_id")
+    .eq("user_id", user.id);
+
+  if (dependentFilter === "mine") {
+    sessionsQuery = sessionsQuery.is("dependent_id", null);
+  } else if (dependentFilter !== "all") {
+    sessionsQuery = sessionsQuery.eq("dependent_id", dependentFilter);
+  }
+
+  const { data: sessions } = await sessionsQuery
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -75,6 +127,12 @@ export default async function HistoryPage() {
         >
           Saved assessments linked to your account.
         </p>
+        {dependentList.length > 0 ? (
+          <HistoryDependentFilter
+            dependents={dependentList}
+            value={dependentFilter}
+          />
+        ) : null}
         {!sessions?.length ? (
           <p style={{ color: MUTED }}>
             No saved sessions yet.{" "}

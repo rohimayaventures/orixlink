@@ -39,12 +39,15 @@ function LandingPageInner() {
   const searchParams = useSearchParams();
   const { openAuthModal } = useAuth();
   const [dismissedQueryNotice, setDismissedQueryNotice] = useState(false);
+  const [dismissedFamilyWelcome, setDismissedFamilyWelcome] = useState(false);
 
   const authRequired = searchParams.get("auth") === "required";
   const sessionExpired = searchParams.get("session") === "expired";
+  const familyWelcome = searchParams.get("family_welcome") === "1";
   const showAuthNotice = authRequired && !dismissedQueryNotice;
   const showSessionNotice =
     !authRequired && sessionExpired && !dismissedQueryNotice;
+  const showFamilyWelcome = familyWelcome && !dismissedFamilyWelcome;
 
   useEffect(() => {
     if (!authRequired || dismissedQueryNotice) return;
@@ -54,6 +57,11 @@ function LandingPageInner() {
 
   function dismissQueryNotice() {
     setDismissedQueryNotice(true);
+    router.replace("/", { scroll: false });
+  }
+
+  function dismissFamilyWelcome() {
+    setDismissedFamilyWelcome(true);
     router.replace("/", { scroll: false });
   }
 
@@ -100,6 +108,30 @@ function LandingPageInner() {
               type="button"
               aria-label="Dismiss"
               onClick={dismissQueryNotice}
+              style={{
+                flexShrink: 0,
+                background: "transparent",
+                border: "none",
+                color: "rgba(244,239,230,0.55)",
+                cursor: "pointer",
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Cross2Icon width={16} height={16} />
+            </button>
+          </div>
+        )}
+        {showFamilyWelcome && (
+          <div role="status" style={{ ...QUERY_NOTICE_STYLE, width: "100%", boxSizing: "border-box" }}>
+            <span style={{ flex: 1, lineHeight: 1.45, textAlign: "center" }}>
+              Welcome to your family plan on OrixLink AI. You can start an assessment anytime.
+            </span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={dismissFamilyWelcome}
               style={{
                 flexShrink: 0,
                 background: "transparent",

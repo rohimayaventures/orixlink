@@ -30,6 +30,7 @@ import {
   getClinicalTier,
   LANGUAGE_PROMPT_NAMES,
 } from '@/lib/outputLanguages'
+import type { DependentRow } from '@/lib/dependents'
 
 const ROLES = [
   { id: 'clinician', label: 'Medical Professional', desc: 'Nurse, PA, NP, MD' },
@@ -81,6 +82,12 @@ export default function AssessmentPage() {
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [draftHydrated, setDraftHydrated] = useState(false)
+  const [intakeDependents, setIntakeDependents] = useState<DependentRow[]>([])
+  const [selectedDependentId, setSelectedDependentId] = useState('')
+
+  const tierLower = (subscriptionTier || 'free').toLowerCase()
+  const canPickDependentTier =
+    tierLower === 'pro' || tierLower === 'family'
 
   useEffect(() => {
     sessionStorage.removeItem('orixlink_session_id')
@@ -104,12 +111,33 @@ export default function AssessmentPage() {
         if (typeof d.modifiers === 'string') setModifiers(d.modifiers)
         if (typeof d.medications === 'string') setMedications(d.medications)
         if (typeof d.language === 'string') setLanguage(d.language)
+        if (typeof d.dependent_id === 'string') setSelectedDependentId(d.dependent_id)
       }
     } catch {
       /* ignore corrupt draft */
     }
     setDraftHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (!user || !canPickDependentTier) {
+      setIntakeDependents([])
+      return
+    }
+    let cancelled = false
+    void fetch('/api/dependents')
+      .then((r) => r.json())
+      .then((d: { dependents?: DependentRow[] }) => {
+        if (cancelled) return
+        setIntakeDependents(Array.isArray(d.dependents) ? d.dependents : [])
+      })
+      .catch(() => {
+        if (!cancelled) setIntakeDependents([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user, canPickDependentTier])
 
   useEffect(() => {
     if (!draftHydrated) return
@@ -127,6 +155,7 @@ export default function AssessmentPage() {
           modifiers,
           medications,
           language,
+          dependent_id: selectedDependentId,
         })
       )
     } catch {
@@ -143,6 +172,7 @@ export default function AssessmentPage() {
     modifiers,
     medications,
     language,
+    selectedDependentId,
     draftHydrated,
   ])
 
@@ -165,6 +195,7 @@ export default function AssessmentPage() {
     setModifiers('')
     setMedications('')
     setLanguage(DEFAULT_LANGUAGE_CODE)
+    setSelectedDependentId('')
     clearAssessmentDraft()
   }
 
@@ -451,7 +482,10 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                 {ROLES.map((r) => (
                   <button
                     key={r.id}
-                    onClick={() => setRole(r.id)}
+                    onClick={() => {
+                      setRole(r.id)
+                      if (r.id === 'patient') setSelectedDependentId('')
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 16,
                       padding: '18px 20px', borderRadius: 10, textAlign: 'left',
@@ -479,6 +513,39 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   </button>
                 ))}
               </div>
+
+              {role !== '' &&
+                role !== 'patient' &&
+                user &&
+                intakeDependents.length > 0 &&
+                canPickDependentTier && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label
+                      htmlFor="orixlink-assess-dependent"
+                      style={labelStyle}
+                    >
+                      Who are you assessing?
+                    </label>
+                    <select
+                      id="orixlink-assess-dependent"
+                      value={selectedDependentId}
+                      onChange={(e) => setSelectedDependentId(e.target.value)}
+                      style={{
+                        ...inputStyle,
+                        cursor: 'pointer',
+                        appearance: 'auto',
+                        WebkitAppearance: 'menulist',
+                      }}
+                    >
+                      <option value="">Someone else (no profile)</option>
+                      {intakeDependents.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.display_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
               <div style={{ marginBottom: '1.5rem' }}>
                 <label htmlFor="orixlink-output-language" style={labelStyle}>

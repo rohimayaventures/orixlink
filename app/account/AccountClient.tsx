@@ -1,11 +1,16 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import AppShell from "@/components/AppShell";
 import { SkeletonBlock } from "@/components/SkeletonBlock";
+import {
+  DEPENDENT_AGE_RANGES,
+  dependentCapForTier,
+  type DependentRow,
+} from "@/lib/dependents";
 
 type Props = {
   user: User;
@@ -27,6 +32,8 @@ type Props = {
   frozenCreditsSum: number;
   /** Count from billing portal return_url when user had unfrozen credits before opening portal. */
   portalCreditsFrozenHint: number | null;
+  joinFamilyInitialCode: string | null;
+  initialDependents: DependentRow[];
 };
 
 export default function AccountClient({
@@ -37,15 +44,42 @@ export default function AccountClient({
   creditSum,
   frozenCreditsSum,
   portalCreditsFrozenHint,
+  joinFamilyInitialCode,
+  initialDependents,
 }: Props) {
   const router = useRouter();
   const [portalLoading, setPortalLoading] = useState(false);
   const [accountUiReady, setAccountUiReady] = useState(false);
   const [portalFrozenBannerDismissed, setPortalFrozenBannerDismissed] =
     useState(false);
+  const [joinCode, setJoinCode] = useState(() => joinFamilyInitialCode ?? "");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinMessage, setJoinMessage] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
   const tier = subscription?.tier ?? "free";
 
+  const [dependents, setDependents] = useState<DependentRow[]>(initialDependents);
+  const [depFormOpen, setDepFormOpen] = useState(false);
+  const [editingDependentId, setEditingDependentId] = useState<string | null>(
+    null
+  );
+  const [depDisplayName, setDepDisplayName] = useState("");
+  const [depAgeRange, setDepAgeRange] = useState("");
+  const [depConditions, setDepConditions] = useState("");
+  const [depSaving, setDepSaving] = useState(false);
+  const [depFormError, setDepFormError] = useState<string | null>(null);
+
   const subStatusNorm = (subscription?.status ?? "").toLowerCase();
+  const showDependentsSection =
+    (tier === "pro" || tier === "family") &&
+    (subStatusNorm === "active" || subStatusNorm === "trialing");
+  const dependentCap = dependentCapForTier(tier);
+
+  useEffect(() => {
+    setDependents(initialDependents);
+  }, [initialDependents]);
   const showFrozenCreditsNotice =
     (subStatusNorm === "canceled" ||
       subStatusNorm === "cancelled" ||
@@ -60,6 +94,109 @@ export default function AccountClient({
   useEffect(() => {
     setAccountUiReady(true);
   }, []);
+
+  useEffect(() => {
+    setJoinCode(joinFamilyInitialCode ?? "");
+  }, [joinFamilyInitialCode]);
+
+  const depFieldStyle: CSSProperties = {
+    width: "100%",
+    padding: "10px 14px",
+    background: "#141824",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 8,
+    color: "#F4EFE6",
+    fontFamily: "var(--font-body), sans-serif",
+    fontSize: "0.9375rem",
+    boxSizing: "border-box",
+  };
+
+  function truncateConditions(s: string | null, max = 60) {
+    if (!s) return null;
+    const t = s.trim();
+    if (!t) return null;
+    return t.length > max ? `${t.slice(0, max)}…` : t;
+  }
+
+  function openAddDependent() {
+    setEditingDependentId(null);
+    setDepDisplayName("");
+    setDepAgeRange("");
+    setDepConditions("");
+    setDepFormError(null);
+    setDepFormOpen(true);
+  }
+
+  function openEditDependent(d: DependentRow) {
+    setEditingDependentId(d.id);
+    setDepDisplayName(d.display_name);
+    setDepAgeRange(d.age_range ?? "");
+    setDepConditions(d.relevant_conditions ?? "");
+    setDepFormError(null);
+    setDepFormOpen(true);
+  }
+
+  function closeDepForm() {
+    setDepFormOpen(false);
+    setEditingDependentId(null);
+    setDepFormError(null);
+  }
+
+  async function saveDependent() {
+    const name = depDisplayName.trim();
+    if (!name) {
+      setDepFormError("Display name is required");
+      return;
+    }
+    setDepSaving(true);
+    setDepFormError(null);
+    try {
+      const payload = {
+        display_name: name,
+        age_range: depAgeRange.trim() || null,
+        relevant_conditions: depConditions.trim() || null,
+      };
+      if (editingDependentId) {
+        const res = await fetch(`/api/dependents/${editingDependentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setDepFormError((data.error as string) || "Could not update");
+          return;
+        }
+      } else {
+        const res = await fetch("/api/dependents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setDepFormError((data.error as string) || "Could not create");
+          return;
+        }
+      }
+      closeDepForm();
+      router.refresh();
+    } finally {
+      setDepSaving(false);
+    }
+  }
+
+  async function deleteDependent(id: string) {
+    if (!window.confirm("Remove this dependent profile?")) return;
+    const res = await fetch(`/api/dependents/${id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      window.alert((data.error as string) || "Could not delete");
+      return;
+    }
+    router.refresh();
+  }
+
   const used = usage.assessments_used;
   const cap = usage.assessments_cap;
 
@@ -105,6 +242,36 @@ export default function AccountClient({
     };
   })();
 
+  async function submitJoinFamily() {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) return;
+    setJoinLoading(true);
+    setJoinMessage(null);
+    try {
+      const res = await fetch("/api/family/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteCode: code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setJoinMessage({
+          kind: "ok",
+          text: "You have joined the family plan. Your account has been updated.",
+        });
+        router.refresh();
+        router.replace("/account");
+      } else {
+        setJoinMessage({
+          kind: "err",
+          text: (data.error as string) || "Could not join family plan.",
+        });
+      }
+    } finally {
+      setJoinLoading(false);
+    }
+  }
+
   async function openBillingPortal() {
     setPortalLoading(true);
     try {
@@ -148,6 +315,66 @@ export default function AccountClient({
   return (
     <AppShell contentTopPadding={96}>
       <div className="px-5 sm:px-8 pb-16" style={{ maxWidth: 560, margin: "0 auto" }}>
+        {joinFamilyInitialCode && (
+          <div
+            style={{
+              padding: "14px 16px",
+              marginBottom: 16,
+              borderRadius: 10,
+              background: "rgba(200,169,110,0.08)",
+              border: "1px solid rgba(200,169,110,0.2)",
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 12px",
+                fontFamily: "var(--font-body), sans-serif",
+                fontSize: 13,
+                lineHeight: 1.45,
+                color: "rgba(244,239,230,0.75)",
+              }}
+            >
+              You have been invited to join a family plan. Enter your invite code to join.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="Invite code"
+                className="flex-1 rounded-lg px-3 py-2 border text-sm"
+                style={{
+                  background: "#141824",
+                  borderColor: "rgba(255,255,255,0.12)",
+                  color: "var(--text-on-dark)",
+                  fontFamily: "var(--font-mono), monospace",
+                  letterSpacing: "0.08em",
+                }}
+              />
+              <button
+                type="button"
+                disabled={joinLoading || !joinCode.trim()}
+                onClick={() => void submitJoinFamily()}
+                className="btn-gold px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40"
+                style={{ color: "var(--obsidian)" }}
+              >
+                {joinLoading ? "Joining…" : "Join family"}
+              </button>
+            </div>
+            {joinMessage && (
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  fontSize: 13,
+                  fontFamily: "var(--font-body), sans-serif",
+                  color: joinMessage.kind === "ok" ? "#86EFAC" : "#FCA5A5",
+                }}
+              >
+                {joinMessage.text}
+              </p>
+            )}
+          </div>
+        )}
         {showPortalFrozenBanner && (
           <div
             role="status"
@@ -330,6 +557,265 @@ export default function AccountClient({
             </p>
           )}
         </div>
+
+        {showDependentsSection && (
+          <div className="card-dark" style={{ padding: "24px", marginBottom: 24 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "0.6875rem",
+                  fontFamily: "var(--font-mono)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--gold-muted)",
+                  margin: 0,
+                }}
+              >
+                Dependent profiles
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontFamily: "var(--font-body), sans-serif",
+                  fontSize: 13,
+                  color: "rgba(244,239,230,0.55)",
+                }}
+              >
+                {dependents.length} of {dependentCap} profiles
+              </p>
+            </div>
+
+            {dependents.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+                {dependents.map((d) => (
+                  <div
+                    key={d.id}
+                    style={{
+                      padding: "16px 18px",
+                      borderRadius: 10,
+                      background: "#141824",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    <p
+                      className="font-display"
+                      style={{
+                        margin: "0 0 6px",
+                        fontSize: "1.125rem",
+                        fontWeight: 600,
+                        color: "var(--text-on-dark)",
+                      }}
+                    >
+                      {d.display_name}
+                    </p>
+                    {d.age_range ? (
+                      <p
+                        style={{
+                          margin: "0 0 4px",
+                          fontFamily: "var(--font-body), sans-serif",
+                          fontSize: 12,
+                          color: "rgba(244,239,230,0.5)",
+                        }}
+                      >
+                        {d.age_range}
+                      </p>
+                    ) : null}
+                    {truncateConditions(d.relevant_conditions) ? (
+                      <p
+                        style={{
+                          margin: "0 0 10px",
+                          fontFamily: "var(--font-body), sans-serif",
+                          fontSize: 12,
+                          color: "rgba(244,239,230,0.5)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {truncateConditions(d.relevant_conditions)}
+                      </p>
+                    ) : null}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => openEditDependent(d)}
+                        className="btn-ghost-gold"
+                        style={{ padding: "6px 14px", fontSize: 13, borderRadius: 8 }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteDependent(d.id)}
+                        className="btn-ghost-gold"
+                        style={{
+                          padding: "6px 14px",
+                          fontSize: 13,
+                          borderRadius: 8,
+                          borderColor: "rgba(248,113,113,0.35)",
+                          color: "#FCA5A5",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!depFormOpen ? (
+              <button
+                type="button"
+                className="btn-gold"
+                style={{
+                  width: "100%",
+                  color: "var(--obsidian)",
+                  opacity: dependents.length >= dependentCap ? 0.45 : 1,
+                }}
+                disabled={dependents.length >= dependentCap}
+                onClick={openAddDependent}
+              >
+                Add dependent
+              </button>
+            ) : null}
+
+            {depFormOpen && (
+              <div
+                style={{
+                  marginTop: dependents.length > 0 ? 16 : 0,
+                  paddingTop: 16,
+                  borderTop:
+                    dependents.length > 0
+                      ? "1px solid rgba(255,255,255,0.08)"
+                      : "none",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 14px",
+                    fontFamily: "var(--font-body), sans-serif",
+                    fontSize: 14,
+                    color: "rgba(244,239,230,0.75)",
+                  }}
+                >
+                  {editingDependentId ? "Edit dependent" : "New dependent"}
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label
+                      htmlFor="dep-display-name"
+                      style={{
+                        display: "block",
+                        fontSize: 11,
+                        fontFamily: "var(--font-mono)",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--gold-muted)",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Display name
+                    </label>
+                    <input
+                      id="dep-display-name"
+                      type="text"
+                      value={depDisplayName}
+                      onChange={(e) => setDepDisplayName(e.target.value)}
+                      style={depFieldStyle}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="dep-age"
+                      style={{
+                        display: "block",
+                        fontSize: 11,
+                        fontFamily: "var(--font-mono)",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--gold-muted)",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Age range (optional)
+                    </label>
+                    <select
+                      id="dep-age"
+                      value={depAgeRange}
+                      onChange={(e) => setDepAgeRange(e.target.value)}
+                      style={{ ...depFieldStyle, cursor: "pointer" }}
+                    >
+                      <option value="">—</option>
+                      {DEPENDENT_AGE_RANGES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="dep-conditions"
+                      style={{
+                        display: "block",
+                        fontSize: 11,
+                        fontFamily: "var(--font-mono)",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--gold-muted)",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Relevant conditions (optional)
+                    </label>
+                    <textarea
+                      id="dep-conditions"
+                      value={depConditions}
+                      onChange={(e) => setDepConditions(e.target.value)}
+                      placeholder="e.g. asthma, diabetes, heart condition"
+                      rows={3}
+                      style={{ ...depFieldStyle, resize: "vertical", lineHeight: 1.55 }}
+                    />
+                  </div>
+                </div>
+                {depFormError ? (
+                  <p style={{ margin: "12px 0 0", fontSize: 13, color: "#FCA5A5" }}>
+                    {depFormError}
+                  </p>
+                ) : null}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
+                  <button
+                    type="button"
+                    className="btn-gold"
+                    style={{ flex: "1 1 120px", color: "var(--obsidian)" }}
+                    disabled={depSaving}
+                    onClick={() => void saveDependent()}
+                  >
+                    {depSaving ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost-gold"
+                    style={{ flex: "1 1 120px", borderRadius: 8 }}
+                    disabled={depSaving}
+                    onClick={closeDepForm}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {subscription?.stripe_customer_id && (
           <button

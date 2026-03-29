@@ -9,12 +9,26 @@ import {
   promptLanguageName,
   resolveLanguageCode,
 } from "@/lib/outputLanguages";
+import { dependentCapForTier } from "@/lib/dependents";
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const VALID_ROLES = new Set(["patient", "family", "clinician"]);
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function subscriptionAllowsDependents(sub: {
+  tier?: string | null;
+  status?: string | null;
+} | null): boolean {
+  if (!sub) return false;
+  const st = (sub.status ?? "").toLowerCase();
+  if (st !== "active" && st !== "trialing") return false;
+  return dependentCapForTier(sub.tier) > 0;
+}
 
 const SYSTEM_PROMPT = `You are OrixLink AI, a universal triage and differential diagnosis intelligence system built by Rohimaya Health AI. You assess any symptom, any person, any moment — no prior procedure or diagnosis required.
 
@@ -167,12 +181,14 @@ export async function POST(request: NextRequest) {
       context,
       language,
       session_id: sessionIdBody,
+      dependent_id: dependentIdBody,
     } = body as {
       messages?: { role: string; content: string }[];
       role?: string;
       context?: string;
       language?: string;
       session_id?: string | null;
+      dependent_id?: string | null;
     };
 
     const langCode = resolveLanguageCode(
@@ -194,6 +210,7 @@ export async function POST(request: NextRequest) {
 
     const yearMonth = new Date().toISOString().slice(0, 7);
     let admin: AdminClient | null = null;
+    let resolvedDependentId: string | null = null;
 
     if (user) {
       try {
@@ -207,11 +224,59 @@ export async function POST(request: NextRequest) {
 
       const { data: sub } = await admin
         .from("subscriptions")
-        .select("tier, assessments_cap")
+        .select("tier, status, assessments_cap")
         .eq("user_id", user.id)
         .maybeSingle();
 
       const userCap = resolveUserCapForAttempt(sub);
+
+      const roleTrim =
+        typeof role === "string" && role.trim() !== "" ? role.trim() : "patient";
+      if (
+        dependentIdBody &&
+        typeof dependentIdBody === "string" &&
+        dependentIdBody.trim() !== ""
+      ) {
+        if (roleTrim === "patient") {
+          return NextResponse.json(
+            { error: "Dependent profile applies only when assessing someone else" },
+            { status: 400 }
+          );
+        }
+        const depId = dependentIdBody.trim();
+        if (!UUID_RE.test(depId)) {
+          return NextResponse.json(
+            { error: "Invalid dependent_id" },
+            { status: 400 }
+          );
+        }
+        if (!subscriptionAllowsDependents(sub)) {
+          return NextResponse.json(
+            { error: "Pro or Family subscription required to link a dependent" },
+            { status: 403 }
+          );
+        }
+        const { data: depRow, error: depErr } = await admin
+          .from("dependents")
+          .select("id")
+          .eq("id", depId)
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+        if (depErr) {
+          console.error("assess dependent lookup", depErr);
+          return NextResponse.json(
+            { error: "Could not verify dependent" },
+            { status: 500 }
+          );
+        }
+        if (!depRow) {
+          return NextResponse.json(
+            { error: "Dependent not found" },
+            { status: 400 }
+          );
+        }
+        resolvedDependentId = depId;
+      }
 
       const { data: currentUsage } = await admin
         .from("usage_tracking")
@@ -459,6 +524,9 @@ Current session context:
               context: contextSnippet,
               language: langStored,
               urgency_level: urgency,
+              ...(resolvedDependentId
+                ? { dependent_id: resolvedDependentId }
+                : {}),
             })
             .select("id")
             .single();

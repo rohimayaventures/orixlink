@@ -95,15 +95,20 @@ export default function AppShell({
               "linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent)",
           }}
         >
-          {[
-            ["Home", "/"],
-            ["Pricing", "/pricing"],
-            ["Assessment", "/assessment"],
-            ["Legal", "/legal"],
-            ["Dash", "/dashboard"],
-            ["History", "/history"],
-          ].map(([label, href]) => (
-            <Link key={href} href={href} style={{ ...navLinkStyle, whiteSpace: "nowrap" }}>
+          {(
+            [
+              ["Home", "/"],
+              ["Pricing", "/pricing"],
+              ["Assessment", "/assessment"],
+              ["Legal", "/legal"],
+              ...(Boolean(user) && !usage.loading && usage.tier === "family"
+                ? ([["Family", "/family"]] as [string, string][])
+                : []),
+              ["Dash", "/dashboard"],
+              ["History", "/history"],
+            ] as [string, string][]
+          ).map(([label, href]) => (
+            <Link key={href + label} href={href} style={{ ...navLinkStyle, whiteSpace: "nowrap" }}>
               {label}
             </Link>
           ))}

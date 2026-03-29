@@ -23,16 +23,43 @@ function AuthSignUpInner() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/assessment";
   const signInHref = `/auth/signin?redirect=${encodeURIComponent(redirect)}`;
+  const familyCode = searchParams.get("family_code");
 
   const [tier, setTier] = useState<Tier>("free");
   const [billing, setBilling] = useState<"annual" | "monthly">("annual");
   const [phase, setPhase] = useState<Phase>("idle");
   const [checkoutError, setCheckoutError] = useState(false);
   const checkoutStarted = useRef(false);
+  const familyJoinHandled = useRef(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+    if (!familyCode?.trim()) return;
+    if (familyJoinHandled.current) return;
+    familyJoinHandled.current = true;
+    void (async () => {
+      const res = await fetch("/api/family/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviteCode: familyCode.trim().toUpperCase(),
+        }),
+      });
+      if (res.ok) {
+        router.replace("/?family_welcome=1");
+      } else {
+        router.replace(
+          `/account?join_family=${encodeURIComponent(familyCode.trim().toUpperCase())}`
+        );
+      }
+    })();
+  }, [loading, user, familyCode, router]);
 
   useEffect(() => {
     if (loading) return;
     if (user && phase === "idle") {
+      if (familyCode?.trim()) return;
       const redirectTo = searchParams.get("redirect");
       if (
         redirectTo &&
@@ -44,17 +71,18 @@ function AuthSignUpInner() {
         router.replace("/account");
       }
     }
-  }, [loading, user, phase, router, searchParams]);
+  }, [loading, user, phase, router, searchParams, familyCode]);
 
   useEffect(() => {
     if (loading || !user) return;
     if (phase !== "awaiting-auth") return;
+    if (familyCode?.trim() && tier === "free") return;
     if (tier === "free") {
       router.replace(redirect);
       return;
     }
     setPhase("checkout");
-  }, [user, loading, phase, tier, redirect, router]);
+  }, [user, loading, phase, tier, redirect, router, familyCode]);
 
   useEffect(() => {
     if (phase !== "checkout" || !user) return;

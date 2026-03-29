@@ -18,6 +18,7 @@ CREATE OR REPLACE FUNCTION public.attempt_assessment(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $function$
 declare
   v_period text := to_char(now(), 'YYYY-MM');
@@ -94,18 +95,28 @@ begin
 end;
 $function$;
 
-create or replace function rollback_assessment(
+revoke all on function public.attempt_assessment(uuid, integer) from public;
+grant execute on function public.attempt_assessment(uuid, integer) to service_role;
+
+CREATE OR REPLACE FUNCTION public.rollback_assessment(
   p_user_id uuid
 )
-returns void as $$
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 declare
   v_period text := to_char(now(), 'YYYY-MM');
 begin
-  update usage_tracking
-  set assessments_used = 
+  update public.usage_tracking
+  set assessments_used =
       greatest(assessments_used - 1, 0),
       updated_at = now()
   where user_id = p_user_id
     and period_month = v_period;
 end;
-$$ language plpgsql security definer;
+$$;
+
+revoke all on function public.rollback_assessment(uuid) from public;
+grant execute on function public.rollback_assessment(uuid) to service_role;
