@@ -30,6 +30,7 @@ OrixLink reads who is asking — patient, family member, or medical professional
 - **Ranked differential diagnoses** — HIGH / MODERATE / LOWER with supporting evidence
 - **Red flag tracker** — per-symptom Present / Absent / Unknown, updates in real time
 - **Living conversation** — new symptoms update the full assessment dynamically
+- **Scheduled follow-up reminders** — Pro, Family, and Lifetime subscribers can opt in on the results screen to a single check-in email at 24, 48, or 72 hours (delivered via Resend)
 - **Patient refusal protocol** — hours-to-harm timeline, irreversible outcome framing, 911 language
 - **Multi-language support (12)** — Response language dropdown for all roles (patient, family, clinician): English, Spanish, French, Portuguese, Mandarin, Arabic, Hindi, Vietnamese, Tagalog, Haitian Creole, Somali, Amharic; tiered in-product notices and English emergency duplicate for moderate/low tiers when urgency is ED-now
 - **Universal intake** — 8 situation categories, no prior diagnosis required

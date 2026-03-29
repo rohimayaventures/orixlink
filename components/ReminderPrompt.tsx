@@ -61,8 +61,8 @@ export function ReminderPrompt({
             lineHeight: "1.6",
           }}
         >
-          Get a check-in reminder at 24, 48, or 72 hours. Available on Pro and
-          Family plans.
+          Get a check-in reminder at 24, 48, or 72 hours. Available on Pro,
+          Family, and Lifetime plans.
         </p>
         <button
           type="button"

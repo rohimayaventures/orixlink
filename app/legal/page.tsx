@@ -67,7 +67,7 @@ export default function LegalPage() {
             fontFamily: "var(--font-mono)",
           }}
         >
-          Effective March 29, 2026
+          Effective March 28, 2026
         </p>
 
         <section style={{ marginBottom: "3rem" }}>
@@ -209,6 +209,12 @@ export default function LegalPage() {
               per month cap. This cap applies permanently and is not subject to change
               after purchase.
             </p>
+            <p style={{ marginBottom: "1rem" }}>
+              Pro, Family, and Lifetime tiers include the ability to schedule optional
+              follow-up email reminders after you view assessment results (offered in
+              the product at 24, 48, or 72 hours). The Free tier does not include this
+              feature.
+            </p>
             <p>
               Refunds are not offered for subscription periods already in use. If you
               believe you were charged in error contact us at{" "}
@@ -310,9 +316,9 @@ export default function LegalPage() {
             <p style={{ marginBottom: "1rem" }}>
               We share data only with the following service providers as necessary to
               operate the product: Supabase (database and authentication), Stripe
-              (billing and payments), Anthropic (AI assessment generation),
-              Loops (transactional email for reminders you opt into), Vercel
-              (hosting and analytics).
+              (billing and payments), Anthropic (AI assessment generation), Resend
+              (transactional email to deliver follow-up reminders you schedule),
+              Vercel (hosting and analytics).
             </p>
             <p style={{ marginBottom: "1rem" }}>
               Each provider is subject to their own privacy policy and data handling
