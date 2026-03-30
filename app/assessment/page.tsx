@@ -13,6 +13,8 @@ import CapReachedPrompt, {
   type CapReachedPayload,
 } from '@/components/CapReachedPrompt'
 import {
+  clearAnonAssessmentUsed,
+  clearAnonSessionData,
   hasUsedAnonAssessment,
   markAnonAssessmentUsed,
 } from '@/lib/anonSession'
@@ -327,6 +329,20 @@ export default function AssessmentPage() {
   }
 
   function handleStartOver() {
+    try {
+      sessionStorage.removeItem('orixlink_session_id')
+      sessionStorage.removeItem('orixlink_response')
+      sessionStorage.removeItem('orixlink_session')
+      sessionStorage.removeItem('orixlink_history_warning')
+      sessionStorage.removeItem('orixlink_dependent_id')
+      sessionStorage.removeItem('orixlink_family_member_target_id')
+    } catch {
+      /* ignore */
+    }
+    clearAnonAssessmentUsed()
+    clearAnonSessionData()
+    clearAssessmentDraft()
+    setSessionId(null)
     setStep(1)
     setRole('')
     setContext('')
@@ -341,7 +357,9 @@ export default function AssessmentPage() {
     setQuickAddName('')
     setQuickAddAge('')
     setFamilyMemberTargetId('')
-    clearAssessmentDraft()
+    setLoading(false)
+    setError('')
+    setCapPayload(null)
   }
 
   async function handleQuickAddDependent() {
@@ -436,9 +454,25 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
         sessionStorage.removeItem('orixlink_history_warning')
       }
       sessionStorage.setItem('orixlink_response', data.response)
-      sessionStorage.setItem('orixlink_session', JSON.stringify({
-        role, context, language, patientAge, symptoms
-      }))
+      const sessionPayload: Record<string, string> = {
+        role, context, language, patientAge, symptoms,
+      }
+      if (selectedDependentId.trim()) {
+        sessionPayload.dependent_id = selectedDependentId.trim()
+        sessionStorage.setItem('orixlink_dependent_id', selectedDependentId.trim())
+      } else {
+        sessionStorage.removeItem('orixlink_dependent_id')
+      }
+      if (familyMemberTargetId.trim()) {
+        sessionPayload.family_member_target_id = familyMemberTargetId.trim()
+        sessionStorage.setItem(
+          'orixlink_family_member_target_id',
+          familyMemberTargetId.trim()
+        )
+      } else {
+        sessionStorage.removeItem('orixlink_family_member_target_id')
+      }
+      sessionStorage.setItem('orixlink_session', JSON.stringify(sessionPayload))
       clearAssessmentDraft()
       router.push('/assessment/results')
     } catch {
@@ -1010,11 +1044,24 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   type="button"
                   onClick={() => setStep(3)}
                   disabled={!canProceedStep2}
-                  className="orix-btn-gold"
                   style={{
-                    flex: 1, opacity: canProceedStep2 ? 1 : 0.4, cursor: canProceedStep2 ? 'pointer' : 'not-allowed',
-                    padding: '14px 20px', borderRadius: 8,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: 8,
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontWeight: canProceedStep2 ? 600 : undefined,
+                    background: canProceedStep2
+                      ? '#C8A96E'
+                      : 'rgba(200,169,110,0.25)',
+                    color: canProceedStep2
+                      ? '#080C14'
+                      : 'rgba(8,12,20,0.5)',
+                    cursor: canProceedStep2 ? 'pointer' : 'not-allowed',
+                    transition: 'background 0.2s ease, color 0.2s ease',
                   }}
                 >
                   Continue <ArrowRightIcon style={{ width: 16, height: 16 }} />
@@ -1156,11 +1203,27 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   type="button"
                   onClick={handleSubmit}
                   disabled={!canSubmit || loading}
-                  className="orix-btn-gold"
                   style={{
-                    flex: 1, opacity: canSubmit && !loading ? 1 : 0.4, cursor: canSubmit && !loading ? 'pointer' : 'not-allowed',
-                    padding: '14px 20px', borderRadius: 8,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: 8,
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontWeight: canSubmit && !loading ? 600 : undefined,
+                    background:
+                      canSubmit && !loading
+                        ? '#C8A96E'
+                        : 'rgba(200,169,110,0.25)',
+                    color:
+                      canSubmit && !loading
+                        ? '#080C14'
+                        : 'rgba(8,12,20,0.5)',
+                    cursor:
+                      canSubmit && !loading ? 'pointer' : 'not-allowed',
+                    transition: 'background 0.2s ease, color 0.2s ease',
                   }}
                 >
                   {loading ? 'Running assessment...' : 'Run OrixLink Assessment'}

@@ -50,7 +50,14 @@ export async function GET() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!isActiveProOrFamily(sub)) {
+    const { data: familyMembershipGet } = await admin
+      .from("family_members")
+      .select("owner_user_id")
+      .eq("member_user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!isActiveProOrFamily(sub) && !familyMembershipGet) {
       return NextResponse.json({ dependents: [] });
     }
 
@@ -121,14 +128,22 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!isActiveProOrFamily(sub)) {
+    const { data: familyMembership } = await admin
+      .from("family_members")
+      .select("owner_user_id")
+      .eq("member_user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!isActiveProOrFamily(sub) && !familyMembership) {
       return NextResponse.json(
         { error: "Pro or Family subscription required" },
         { status: 403 }
       );
     }
 
-    const cap = dependentCapForTier(sub?.tier);
+    const effectiveTier = familyMembership ? "family" : (sub?.tier || "free");
+    const cap = dependentCapForTier(effectiveTier);
     const { count, error: countErr } = await admin
       .from("dependents")
       .select("id", { count: "exact", head: true })

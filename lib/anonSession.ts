@@ -22,6 +22,11 @@ export function markAnonAssessmentUsed(): void {
   localStorage.setItem(ANON_USED_KEY, "true");
 }
 
+export function clearAnonAssessmentUsed(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ANON_USED_KEY);
+}
+
 export function getAnonSessionData(): AnonSessionPayload | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem(LAST_SESSION_KEY);

@@ -15,39 +15,19 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const ROLE_FRAMING: Record<string, string> = {
-  patient:
-    "The user is assessing their own symptoms. Use first-person framing. Address the user directly as \"you\".",
-
-  caregiver_child:
-    "The user is a parent or guardian assessing a child or teenager. Use caregiver-directed language -- address the parent not the child. Apply pediatric clinical framing: lower urgency thresholds for high fever in infants under 3 months, respiratory distress, unusual lethargy, refusal to eat, and dehydration. Flag febrile seizure risk for children under 5. Use \"your child\" throughout. For Tier 4 urgency say \"Take your child to the emergency department now\" not \"Go to the emergency department now\".",
-
-  caregiver_elderly:
-    "The user is assessing an elderly parent or family member. Apply geriatric clinical framing: consider fall risk, medication interaction likelihood, atypical symptom presentation in older adults such as confusion as the only sign of infection, and cognitive baseline changes. Lower the urgency threshold -- older adults deteriorate faster and present atypically. Use \"your family member\" or \"your parent\" throughout.",
-
-  caregiver_spouse:
-    "The user is assessing their spouse or partner. Use third-person framing directed at the caregiver. Use \"your partner\" or \"they\" throughout. Standard adult urgency thresholds apply unless age context suggests otherwise.",
-
-  caregiver_family_member:
-    "The user is assessing another adult family member. Use third-person clinical framing. Address the caregiver directly. Use \"the person you are helping\" or \"they\" throughout. Standard adult urgency thresholds apply.",
-
-  caregiver_other:
-    "The user is a caregiver assessing another adult. Use third-person clinical framing. Address the caregiver directly. Use \"the person you are helping\" or \"they\" throughout.",
-
-  clinician:
-    "The user is a medical professional -- nurse, PA, NP, or MD. Use clinical terminology appropriate for a trained clinician. Include differential reasoning with clinical language. Use medical shorthand and assume familiarity with anatomy, physiology, and standard diagnostic reasoning. Do not simplify clinical language. Present the differential with likelihood reasoning a clinician would use at bedside.",
-};
-
-function intakeRoleToDbRole(intake: string): "patient" | "family" | "clinician" {
-  const t = intake.trim();
-  if (t === "clinician") return "clinician";
-  if (t === "patient") return "patient";
-  if (t.startsWith("caregiver_")) return "family";
-  return "patient";
-}
-
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const VALID_ROLES = new Set([
+  "patient",
+  "caregiver_child",
+  "caregiver_elderly",
+  "caregiver_spouse",
+  "caregiver_family_member",
+  "caregiver_other",
+  "clinician",
+  "family",
+]);
 
 function subscriptionAllowsDependents(sub: {
   tier?: string | null;
@@ -94,15 +74,13 @@ You always produce these components in every response:
    [Red flag description]: ABSENT
    [Red flag description]: UNKNOWN
 
-5. NEXT_STEPS: What to do right now in plain language. One clear paragraph. No asterisks. If role is patient or family — easy to understand, no medical jargon, tell them exactly what to say when they arrive. If role is clinician — full clinical language with workup recommendations.
+5. NEXT_STEPS: What to do right now in plain language. One clear paragraph. No asterisks. Adapt NEXT_STEPS to match the role framing established at the top of this system context. The voice and audience are already set — maintain them consistently here.
 
 6. FOLLOW_UP_PROMPTS: Three short symptom updates the user might want to report next — written as first-person statements the user would say, not questions. These should be the most clinically relevant new information that would change the assessment. Examples: "His fingers are now turning blue", "She is refusing to go to the hospital", "The swelling has gotten worse in the last hour", "He just developed a fever", "She can no longer feel her hand at all". Make them specific to the current clinical picture.
 
 End with a one-sentence disclaimer in the response language that preserves this meaning: OrixLink provides AI-generated clinical support only, not a diagnosis, and in an emergency the user should contact local emergency services (use the appropriate number for the user's region when known, e.g. 911 in the US).
 
-Adapt all language to role:
-- clinician: medical terminology, full differential, workup recommendations, specialist referral guidance
-- patient or family: easy to understand, no jargon, clear single action, translate every medical term
+Maintain the role framing and language register established at the top of this context throughout every section of the response. Do not shift register or simplify/complexify based on this section -- the role instruction above takes precedence.
 
 If the patient is refusing care, deliver a specific hours-to-harm timeline. State clearly what becomes irreversible at each time threshold. Do not repeat the recommendation — escalate with specifics only.
 
@@ -542,25 +520,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const intakeRoleKey =
+      typeof role === "string" && role.trim() !== "" ? role.trim() : "patient";
+
     let dependentContext = "";
     let familyMemberContextLine = "";
 
     if (user && admin) {
       if (resolvedDependentId) {
-        const { data: dep } = await admin
+        const { data: dependent } = await admin
           .from("dependents")
           .select("display_name, age_range, relevant_conditions")
           .eq("id", resolvedDependentId)
           .eq("owner_user_id", user.id)
           .maybeSingle();
-        if (dep) {
+
+        if (dependent) {
           dependentContext =
-            "\nDependent profile: " +
-            String(dep.display_name) +
-            (dep.age_range ? `, age range: ${dep.age_range}` : "") +
-            (dep.relevant_conditions
-              ? `. Known conditions: ${dep.relevant_conditions}. Factor into differential and urgency.`
-              : "");
+            `\n\nDependent profile loaded: ` +
+            `${dependent.display_name}` +
+            (dependent.age_range
+              ? `, age range: ${dependent.age_range}`
+              : "") +
+            (dependent.relevant_conditions
+              ? `. Known conditions: ` +
+                `${dependent.relevant_conditions}. ` +
+                `Factor these into the differential ` +
+                `and urgency assessment.`
+              : ".");
         }
       }
       if (resolvedFamilyMemberTargetId) {
@@ -587,23 +574,119 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const intakeRoleKey =
-      typeof role === "string" && role.trim() !== "" ? role.trim() : "patient";
-    const roleFraming =
-      ROLE_FRAMING[intakeRoleKey] ??
-      "The user is assessing symptoms. Use clear plain-language framing.";
+    const roleFraming: Record<string, string> = {
+      patient:
+        "You are responding to a person assessing " +
+        "their own symptoms. Use first-person " +
+        "framing throughout. Address the user " +
+        'directly as "you". Use plain language -- ' +
+        "no medical jargon. Translate every " +
+        "clinical term into words a non-clinician " +
+        "understands.",
+
+      caregiver_child:
+        "You are responding to a parent or guardian " +
+        "who is assessing a child or teenager in " +
+        "their care. Address the parent directly " +
+        "throughout -- never address the child. " +
+        'Use "your child" consistently. Apply ' +
+        "pediatric clinical framing: lower urgency " +
+        "thresholds for high fever in infants under " +
+        "3 months, respiratory distress, unusual " +
+        "lethargy, refusal to eat, dehydration, and " +
+        "febrile seizure risk in children under 5. " +
+        'For Tier 4 urgency write "Take your child ' +
+        'to the emergency department now" -- never ' +
+        '"Go to the emergency department now". ' +
+        "Use plain language throughout.",
+
+      caregiver_elderly:
+        "You are responding to someone assessing an " +
+        "elderly parent or family member. Address " +
+        "the caregiver directly throughout. Use " +
+        '"your family member" or "your parent" ' +
+        "consistently. Apply geriatric clinical " +
+        "framing: older adults present atypically -- " +
+        "confusion may be the only sign of infection, " +
+        "pain thresholds are often blunted, and " +
+        "deterioration is faster than in younger " +
+        "adults. Flag fall risk, polypharmacy " +
+        "interaction likelihood, and cognitive " +
+        "baseline changes. Lower the urgency " +
+        "threshold -- err toward higher urgency " +
+        "for elderly patients. Use plain language.",
+
+      caregiver_spouse:
+        "You are responding to someone assessing " +
+        "their spouse or partner. Address the " +
+        "caregiver directly. Use \"your partner\" " +
+        'or "they" consistently throughout. ' +
+        "Standard adult urgency thresholds apply " +
+        "unless age context indicates otherwise. " +
+        "Use plain language.",
+
+      caregiver_family_member:
+        "You are responding to someone assessing " +
+        "another adult family member. Address the " +
+        "caregiver directly throughout. Use \"the " +
+        'person you are helping" or "they" ' +
+        "consistently. Standard adult urgency " +
+        "thresholds apply. Use plain language.",
+
+      caregiver_other:
+        "You are responding to a caregiver " +
+        "assessing another adult. Address the " +
+        "caregiver directly throughout. Use \"the " +
+        'person you are helping" or "they" ' +
+        "consistently. Standard adult urgency " +
+        "thresholds apply. Use plain language.",
+
+      family:
+        "You are responding to a caregiver " +
+        "assessing a family member. Address the " +
+        "caregiver directly. Use third-person " +
+        "framing for the patient. Standard adult " +
+        "urgency thresholds apply. Use plain " +
+        "language throughout.",
+
+      clinician:
+        "You are responding to a medical " +
+        "professional -- nurse, PA, NP, or MD. " +
+        "Use full clinical terminology throughout. " +
+        "Do not simplify. Include workup " +
+        "recommendations, specialist referral " +
+        "guidance, and clinical shorthand. " +
+        "Assume familiarity with anatomy, " +
+        "physiology, pharmacology, and standard " +
+        "diagnostic reasoning. Present the " +
+        "differential with the reasoning a " +
+        "clinician would use at bedside.",
+    };
+
+    const activeRoleFraming =
+      roleFraming[intakeRoleKey] ?? roleFraming["patient"];
 
     const systemWithContext =
-      SYSTEM_PROMPT +
-      "\n\n--- Current session context ---\n" +
-      `Clinical framing: ${roleFraming}` +
+      `ROLE AND RESPONSE FRAMING:\n` +
+      activeRoleFraming +
       dependentContext +
       familyMemberContextLine +
-      `\nSituation: ${context || "not specified"}` +
-      `\nLanguage: ${language || "English"}` +
-      "\n- Response language (prose): " +
-      `${responseLanguageName} (code: ${langCode})` +
-      "\n- Critical instruction: Evaluate all red flags present in the message and assign the highest clinically justified urgency level. Do not default to a lower level. If compartment syndrome is on the differential and multiple red flags are present, assign EMERGENCY_DEPARTMENT_NOW. If neurological signs are present in any post-procedure patient, assign EMERGENCY_DEPARTMENT_NOW.";
+      `\n\n` +
+      SYSTEM_PROMPT +
+      `\n\nSession context:` +
+      `\n- Situation: ${context || "not specified"}` +
+      `\n- Response language: ` +
+      `${responseLanguageName} (${langCode})` +
+      `\n- Critical instruction: Evaluate all ` +
+      `red flags present in the message and ` +
+      `assign the highest clinically justified ` +
+      `urgency level. Do not default to a lower ` +
+      `level. If compartment syndrome is on the ` +
+      `differential and multiple red flags are ` +
+      `present assign EMERGENCY_DEPARTMENT_NOW. ` +
+      `If neurological signs are present in any ` +
+      `post-procedure patient assign ` +
+      `EMERGENCY_DEPARTMENT_NOW.`;
 
     const anthropicMessages: MessageParam[] = messages.map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
@@ -649,8 +732,11 @@ export async function POST(request: NextRequest) {
     if (user && admin) {
       const urgency = parseUrgencyFromAssessmentText(responseText);
       const roleRaw =
-        typeof role === "string" && role.trim() !== "" ? role.trim() : "patient";
-      const roleDb = intakeRoleToDbRole(roleRaw);
+        typeof role === "string" && role.trim() !== ""
+          ? role.trim()
+          : "patient";
+
+      const roleDb = VALID_ROLES.has(roleRaw) ? roleRaw : "patient";
       const langStored =
         typeof language === "string" && language.length > 0 ? language : "en";
 
@@ -761,6 +847,8 @@ export async function POST(request: NextRequest) {
       response: responseText,
       usage: anthropicUsage,
       session_id: sessionIdOut,
+      dependent_id: resolvedDependentId ?? undefined,
+      family_member_target_id: resolvedFamilyMemberTargetId ?? undefined,
       ...(historyWarning ? { historyWarning: true } : {}),
     });
   } catch (error) {

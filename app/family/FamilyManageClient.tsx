@@ -18,6 +18,10 @@ export type FamilyMemberRow = {
 
 type Props = {
   isFamily: boolean;
+  isMemberNotOwner?: boolean;
+  ownerInviteLabel?: string;
+  memberMonthlyUsage?: number;
+  memberPoolUsage?: FamilyUsagePayload | null;
   initialMembers: FamilyMemberRow[];
   initialShareCode: string | null;
   initialUsage: FamilyUsagePayload | null;
@@ -92,6 +96,10 @@ function statusBadge(status: string) {
 
 export default function FamilyManageClient({
   isFamily,
+  isMemberNotOwner = false,
+  ownerInviteLabel = "Plan owner",
+  memberMonthlyUsage = 0,
+  memberPoolUsage = null,
   initialMembers,
   initialShareCode,
   initialUsage,
@@ -223,6 +231,185 @@ export default function FamilyManageClient({
     await navigator.clipboard.writeText(shareCode);
     setCopyDone(true);
     window.setTimeout(() => setCopyDone(false), 2000);
+  }
+
+  if (isMemberNotOwner) {
+    const pool = memberPoolUsage;
+    const poolPct =
+      pool && pool.cap > 0
+        ? Math.min(100, (pool.totalUsed / pool.cap) * 100)
+        : 0;
+    const poolHigh = poolPct > 80;
+    const resetLabel =
+      pool?.resetDate != null
+        ? new Date(pool.resetDate).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })
+        : null;
+
+    return (
+      <AppShell contentTopPadding={96}>
+        <div className="px-5 sm:px-8 pb-16 max-w-2xl mx-auto">
+          <h1
+            className="font-display mb-2"
+            style={{ fontSize: "28px", color: "var(--text-on-dark)" }}
+          >
+            Family membership
+          </h1>
+          <p
+            className="mb-6 flex flex-wrap items-center gap-2"
+            style={{
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: 14,
+              color: "rgba(244,239,230,0.55)",
+              lineHeight: 1.5,
+            }}
+          >
+            <span>
+              Invited by <strong style={{ color: "var(--text-on-dark)" }}>{ownerInviteLabel}</strong>
+            </span>
+            {statusBadge("active")}
+          </p>
+
+          <section className="mb-8">
+            <h2
+              className="font-mono text-xs uppercase tracking-widest mb-4"
+              style={{ color: "var(--gold-muted)" }}
+            >
+              Your usage this month
+            </h2>
+            <div
+              className="rounded-xl border p-5"
+              style={{
+                borderColor: "var(--obsidian-muted)",
+                background: "var(--obsidian-mid)",
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "DM Sans, sans-serif",
+                  fontSize: 15,
+                  color: "var(--text-on-dark)",
+                  margin: 0,
+                }}
+              >
+                {memberMonthlyUsage} assessment
+                {memberMonthlyUsage === 1 ? "" : "s"} used
+              </p>
+            </div>
+          </section>
+
+          {pool ? (
+            <section className="mb-10">
+              <h2
+                className="font-mono text-xs uppercase tracking-widest mb-4"
+                style={{ color: "var(--gold-muted)" }}
+              >
+                Family pool this month
+              </h2>
+              <div
+                className="rounded-xl border p-5"
+                style={{
+                  borderColor: "var(--obsidian-muted)",
+                  background: "var(--obsidian-mid)",
+                }}
+              >
+                <div
+                  style={{
+                    height: 8,
+                    borderRadius: 4,
+                    background: "rgba(255,255,255,0.07)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${poolPct}%`,
+                      borderRadius: 4,
+                      background: poolHigh
+                        ? "rgba(220,50,50,0.7)"
+                        : "#C8A96E",
+                      transition: "width 0.35s ease",
+                    }}
+                  />
+                </div>
+                <p
+                  className="mt-3 mb-1"
+                  style={{
+                    fontFamily: "DM Sans, sans-serif",
+                    fontSize: 14,
+                    color: "var(--text-on-dark)",
+                  }}
+                >
+                  {pool.totalUsed} of {pool.cap} used this month
+                </p>
+                {resetLabel ? (
+                  <p
+                    style={{
+                      fontFamily: "DM Sans, sans-serif",
+                      fontSize: 13,
+                      color: "rgba(244,239,230,0.5)",
+                      margin: 0,
+                    }}
+                  >
+                    Resets {resetLabel}
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="mb-10">
+            <h2
+              className="font-mono text-xs uppercase tracking-widest mb-4"
+              style={{ color: "var(--gold-muted)" }}
+            >
+              Your plan features
+            </h2>
+            <ul
+              className="rounded-xl border p-5 space-y-3"
+              style={{
+                borderColor: "var(--obsidian-muted)",
+                background: "var(--obsidian-mid)",
+                listStyle: "none",
+                margin: 0,
+                padding: "1.25rem",
+              }}
+            >
+              {[
+                "Deep analysis",
+                "Full history",
+                "Reminders",
+              ].map((label) => (
+                <li
+                  key={label}
+                  style={{
+                    fontFamily: "DM Sans, sans-serif",
+                    fontSize: 14,
+                    color: "var(--text-on-dark)",
+                  }}
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <p
+            className="text-sm leading-relaxed"
+            style={{
+              color: "var(--text-muted-dark)",
+              fontFamily: "var(--font-body), sans-serif",
+            }}
+          >
+            To manage plan settings, contact the plan owner.
+          </p>
+        </div>
+      </AppShell>
+    );
   }
 
   if (!isFamily) {

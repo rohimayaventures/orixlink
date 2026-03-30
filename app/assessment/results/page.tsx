@@ -99,6 +99,18 @@ const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; bor
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL || 'https://triage.rohimaya.ai'
 
+function sanitizeRawResponse(text: string): string {
+  return text
+    .replace(/^URGENCY_LEVEL:.*$/gm, '')
+    .replace(/^URGENCY_EXPLANATION:.*$/gm, '')
+    .replace(/^DIFFERENTIAL:/gm, 'Assessment:')
+    .replace(/^RED_FLAGS:/gm, 'Warning signs:')
+    .replace(/^NEXT_STEPS:/gm, 'What to do:')
+    .replace(/^FOLLOW_UP_PROMPTS:/gm, '')
+    .replace(/\*\*/g, '')
+    .trim()
+}
+
 // ── Share summary builder ─────────────────────────────────────────
 function buildShareText(
   assessment: ParsedAssessment,
@@ -344,9 +356,9 @@ function AssessmentView({
       {showEmergencyEnglish && tier === 'low' && (
         <EmergencyEnglishDuplicateBanner tier="low" />
       )}
-      <NextStepsCard steps={assessment.nextSteps} />
-      <DifferentialCard items={assessment.differential} />
       <RedFlagCard flags={assessment.redFlags} />
+      <DifferentialCard items={assessment.differential} />
+      <NextStepsCard steps={assessment.nextSteps} />
       <p style={{
         fontSize: '0.8125rem', color: 'var(--text-muted-light)', lineHeight: 1.6,
         marginTop: 8, marginBottom: 16,
@@ -400,7 +412,7 @@ function ChatBubble({
         background: CARD_BG,
         border: CARD_BORDER,
       }}>
-        {msg.content.replace(/\*\*/g, '')}
+        {sanitizeRawResponse(msg.content)}
       </div>
     </div>
   )
@@ -422,6 +434,11 @@ export default function ResultsPage() {
   const [symptoms, setSymptoms] = useState('')
   const [languageCode, setLanguageCode] = useState('en')
   const [apiSessionId, setApiSessionId] = useState<string | null>(null)
+  const [assessmentDependentId, setAssessmentDependentId] = useState<
+    string | null
+  >(null)
+  const [assessmentFamilyMemberTargetId, setAssessmentFamilyMemberTargetId] =
+    useState<string | null>(null)
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
   const [showHistoryWarning, setShowHistoryWarning] = useState(false)
   const [userTier, setUserTier] = useState<ReminderUserTier>('free')
@@ -437,10 +454,29 @@ export default function ResultsPage() {
     const savedSid = sessionStorage.getItem('orixlink_session_id')
     if (savedSid) setApiSessionId(savedSid)
     if (!savedResponse) { router.push('/assessment'); return }
-    const parsed = savedSession ? JSON.parse(savedSession) : {}
+    const parsed = savedSession ? JSON.parse(savedSession) as Record<string, string> : {}
     setSession(parsed)
     setLanguageCode(resolveLanguageCode(parsed.language))
     setSymptoms(parsed.symptoms || '')
+    if (typeof parsed.dependent_id === 'string' && parsed.dependent_id.trim()) {
+      setAssessmentDependentId(parsed.dependent_id.trim())
+    } else {
+      const sid = sessionStorage.getItem('orixlink_dependent_id')
+      setAssessmentDependentId(sid && sid.trim() ? sid.trim() : null)
+    }
+    if (
+      typeof parsed.family_member_target_id === 'string' &&
+      parsed.family_member_target_id.trim()
+    ) {
+      setAssessmentFamilyMemberTargetId(
+        parsed.family_member_target_id.trim()
+      )
+    } else {
+      const fid = sessionStorage.getItem('orixlink_family_member_target_id')
+      setAssessmentFamilyMemberTargetId(
+        fid && fid.trim() ? fid.trim() : null
+      )
+    }
     const assessment = parseAssessment(savedResponse)
     setLatestAssessment(assessment)
     setCurrentUrgency(assessment.urgencyLevel)
@@ -545,6 +581,15 @@ export default function ResultsPage() {
           context: session.context,
           language: session.language,
           ...(apiSessionId ? { session_id: apiSessionId } : {}),
+          ...(assessmentDependentId?.trim()
+            ? { dependent_id: assessmentDependentId.trim() }
+            : {}),
+          ...(assessmentFamilyMemberTargetId?.trim()
+            ? {
+                family_member_target_id:
+                  assessmentFamilyMemberTargetId.trim(),
+              }
+            : {}),
         }),
       })
       const data = await res.json()
@@ -559,6 +604,25 @@ export default function ResultsPage() {
       if (typeof data.session_id === 'string' && data.session_id) {
         setApiSessionId(data.session_id)
         sessionStorage.setItem('orixlink_session_id', data.session_id)
+      }
+      if (typeof data.dependent_id === 'string' && data.dependent_id.trim()) {
+        setAssessmentDependentId(data.dependent_id.trim())
+        sessionStorage.setItem(
+          'orixlink_dependent_id',
+          data.dependent_id.trim()
+        )
+      }
+      if (
+        typeof data.family_member_target_id === 'string' &&
+        data.family_member_target_id.trim()
+      ) {
+        setAssessmentFamilyMemberTargetId(
+          data.family_member_target_id.trim()
+        )
+        sessionStorage.setItem(
+          'orixlink_family_member_target_id',
+          data.family_member_target_id.trim()
+        )
       }
       const updated: Message[] = [...next, { role: 'assistant', content: data.response }]
       setMessages(updated)
@@ -655,6 +719,8 @@ export default function ResultsPage() {
             onClick={() => {
               sessionStorage.removeItem('orixlink_session_id')
               sessionStorage.removeItem('orixlink_assessment_draft')
+              sessionStorage.removeItem('orixlink_dependent_id')
+              sessionStorage.removeItem('orixlink_family_member_target_id')
             }}
           >
             <button

@@ -51,6 +51,7 @@
 
 html {
   font-size: 16px;
+  background: #080C14;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -58,8 +59,8 @@ html {
 
 body {
   font-family: var(--font-body), -apple-system, sans-serif;
-  color: var(--text-on-light);
-  background: var(--cream);
+  color: #F4EFE6;
+  background: #080C14;
   line-height: 1.6;
   min-height: 100vh;
 }
