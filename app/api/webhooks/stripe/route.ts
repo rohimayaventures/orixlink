@@ -279,6 +279,56 @@ export async function POST(request: NextRequest) {
         })
         await upsertUsageTracking(userId, 5)
 
+        const { data: familyMembers, error: familyMembersErr } = await supabaseAdmin
+          .from('family_members')
+          .select('member_user_id')
+          .eq('owner_user_id', userId)
+          .eq('status', 'active')
+          .not('member_user_id', 'is', null)
+        if (familyMembersErr) {
+          console.error('family member lookup on subscription deleted:', familyMembersErr)
+        }
+
+        if (familyMembers && familyMembers.length > 0) {
+          const memberIds = familyMembers
+            .map((m) => m.member_user_id)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+
+          if (memberIds.length > 0) {
+            const nowIso = new Date().toISOString()
+            const { error: memberSubErr } = await supabaseAdmin
+              .from('subscriptions')
+              .update({
+                tier: 'free',
+                status: 'active',
+                updated_at: nowIso,
+              })
+              .in('user_id', memberIds)
+            if (memberSubErr) {
+              console.error('family member subscription downgrade:', memberSubErr)
+            }
+
+            const period = new Date().toISOString().slice(0, 7)
+            const { error: memberUsageErr } = await supabaseAdmin
+              .from('usage_tracking')
+              .update({ assessments_cap: 5 })
+              .in('user_id', memberIds)
+              .eq('period_month', period)
+            if (memberUsageErr) {
+              console.error('family member usage cap downgrade:', memberUsageErr)
+            }
+          }
+
+          const { error: familyRemoveErr } = await supabaseAdmin
+            .from('family_members')
+            .update({ status: 'removed' })
+            .eq('owner_user_id', userId)
+            .eq('status', 'active')
+          if (familyRemoveErr) {
+            console.error('family member status removal on subscription deleted:', familyRemoveErr)
+          }
+        }
+
         const { error: freezeErr } = await supabaseAdmin
           .from('credits')
           .update({ frozen_at: new Date().toISOString() })
