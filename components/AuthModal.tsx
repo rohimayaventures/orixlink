@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -16,6 +17,64 @@ export default function AuthModal({
   onClose,
   supabaseClient,
 }: Props) {
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [isSignupMode, setIsSignupMode] = useState(false);
+  const authRootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const root = authRootRef.current;
+    if (!root) return;
+
+    const syncSignupMode = () => {
+      const submit = root.querySelector(
+        'button[type="submit"]'
+      ) as HTMLButtonElement | null;
+      const inSignup =
+        !!submit && /sign\s*up/i.test((submit.textContent || "").trim());
+      setIsSignupMode(inSignup);
+    };
+
+    syncSignupMode();
+
+    const observer = new MutationObserver(() => {
+      syncSignupMode();
+    });
+
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => observer.disconnect();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const root = authRootRef.current;
+    if (!root) return;
+    const submit = root.querySelector(
+      'button[type="submit"]'
+    ) as HTMLButtonElement | null;
+    if (!submit) return;
+
+    if (isSignupMode && !ageConfirmed) {
+      submit.disabled = true;
+      submit.dataset.ageGated = "true";
+      submit.style.opacity = "0.55";
+      submit.style.cursor = "not-allowed";
+      return;
+    }
+
+    if (submit.dataset.ageGated === "true") {
+      submit.disabled = false;
+      delete submit.dataset.ageGated;
+      submit.style.opacity = "";
+      submit.style.cursor = "";
+    }
+  }, [ageConfirmed, isSignupMode, open]);
+
   if (!open) return null;
   const redirectTo =
     typeof window !== "undefined"
@@ -96,6 +155,7 @@ export default function AuthModal({
         </p>
 
         <div
+          ref={authRootRef}
           style={{
             fontFamily: "var(--font-body), DM Sans, sans-serif",
           }}
@@ -157,6 +217,41 @@ export default function AuthModal({
             showLinks={true}
             view="sign_in"
           />
+          {isSignupMode ? (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+                marginTop: 12,
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                style={{
+                  marginTop: "3px",
+                  width: 16,
+                  height: 16,
+                  accentColor: "#C8A96E",
+                  border: "1px solid rgba(200, 169, 110, 0.35)",
+                  backgroundColor: "#0D1117",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "rgba(244,239,230,0.7)",
+                  lineHeight: 1.6,
+                  fontFamily: "var(--font-body), sans-serif",
+                }}
+              >
+                I confirm I am 18 years of age or older
+              </span>
+            </label>
+          ) : null}
         </div>
       </div>
     </div>

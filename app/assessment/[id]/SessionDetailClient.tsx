@@ -9,6 +9,26 @@ const BORDER = "1px solid rgba(255,255,255,0.07)";
 const TEXT = "#F4EFE6";
 const MUTED = "rgba(244,239,230,0.5)";
 const GOLD = "#C8A96E";
+const STATUS_STYLE: Record<string, { icon: string; bg: string; text: string; border: string }> = {
+  PRESENT: {
+    icon: "+",
+    bg: "rgba(239,68,68,0.15)",
+    text: "#FCA5A5",
+    border: "rgba(239,68,68,0.5)",
+  },
+  ABSENT: {
+    icon: "−",
+    bg: "rgba(34,197,94,0.12)",
+    text: "#86EFAC",
+    border: "rgba(34,197,94,0.45)",
+  },
+  UNKNOWN: {
+    icon: "?",
+    bg: "rgba(255,255,255,0.06)",
+    text: MUTED,
+    border: "rgba(255,255,255,0.12)",
+  },
+};
 
 const URGENCY: Record<string, { label: string; bg: string; border: string; color: string }> = {
   EMERGENCY_DEPARTMENT_NOW: {
@@ -64,6 +84,12 @@ export default function SessionDetailClient({
   const urgencyKey =
     (session.urgency_level as string) || parsed?.urgencyLevel || "CONTACT_DOCTOR_TODAY";
   const u = URGENCY[urgencyKey] || URGENCY.CONTACT_DOCTOR_TODAY;
+  const urgencyText = (session.urgency_level || "").toLowerCase();
+  const showEmergencyBanner =
+    urgencyKey === "EMERGENCY_DEPARTMENT_NOW" ||
+    urgencyText === "emergency" ||
+    urgencyText.includes("ed now") ||
+    urgencyText.includes("emergency department");
 
   return (
     <main
@@ -121,6 +147,37 @@ export default function SessionDetailClient({
         </p>
       </div>
 
+      {showEmergencyBanner && (
+        <div
+          style={{
+            padding: "16px 20px",
+            borderRadius: 12,
+            marginBottom: 12,
+            background: "rgba(239,68,68,0.14)",
+            border: "1px solid rgba(239,68,68,0.45)",
+            color: "#FCA5A5",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: "#F87171",
+                flexShrink: 0,
+              }}
+            />
+            <span
+              className="font-display"
+              style={{ fontSize: "1.125rem", fontWeight: 500, color: "#FCA5A5" }}
+            >
+              Emergency Department — Now
+            </span>
+          </div>
+        </div>
+      )}
+
       {parsed && parsed.differential.length > 0 && (
         <div
           style={{
@@ -153,6 +210,127 @@ export default function SessionDetailClient({
           </ul>
         </div>
       )}
+
+      {parsed && parsed.redFlags.length > 0 && (
+        <div
+          style={{
+            padding: "1.25rem",
+            borderRadius: 12,
+            background: CARD,
+            border: BORDER,
+            marginBottom: 20,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontFamily: "var(--font-mono)",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: GOLD,
+              marginBottom: 12,
+            }}
+          >
+            Warning Signs
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {parsed.redFlags.map((item, i) => {
+              const s = STATUS_STYLE[item.status] || STATUS_STYLE.UNKNOWN;
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      border: `1px solid ${s.border}`,
+                      background: s.bg,
+                      color: s.text,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {s.icon}
+                  </span>
+                  <span style={{ fontSize: "0.875rem", color: TEXT }}>{item.flag}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {parsed && parsed.followUpPrompts.length > 0 && (
+        <div
+          style={{
+            padding: "1.25rem",
+            borderRadius: 12,
+            background: CARD,
+            border: BORDER,
+            marginBottom: 20,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontFamily: "var(--font-mono)",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: GOLD,
+              marginBottom: 12,
+            }}
+          >
+            Suggested follow-ups from this session
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {parsed.followUpPrompts.map((prompt, i) => (
+              <span
+                key={i}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: 100,
+                  fontSize: "0.8125rem",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "#141824",
+                  color: TEXT,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {prompt}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div
+        style={{
+          padding: "1.25rem",
+          borderRadius: 12,
+          background: CARD,
+          border: BORDER,
+          marginBottom: 20,
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: "0.875rem",
+            lineHeight: 1.6,
+            color: MUTED,
+            fontFamily: "DM Sans, sans-serif",
+          }}
+        >
+          This assessment is for informational purposes only and does not constitute medical advice.
+          Always consult a qualified healthcare provider.
+        </p>
+      </div>
 
       <h2
         className="font-display"

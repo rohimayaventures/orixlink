@@ -800,6 +800,7 @@ export default function ResultsPage() {
               payload={capPayload}
               onDismiss={() => setCapPayload(null)}
               isAnonymous={!user}
+              creditsRemaining={capPayload.credits_remaining ?? 0}
             />
           </div>
         )}

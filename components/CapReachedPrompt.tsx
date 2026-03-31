@@ -18,6 +18,7 @@ type Props = {
   onDismiss?: () => void;
   /** Logged-out / anonymous cap UX (e.g. free run exhausted). */
   isAnonymous?: boolean;
+  creditsRemaining?: number;
 };
 
 const GOLD = "var(--gold)";
@@ -27,8 +28,10 @@ export default function CapReachedPrompt({
   payload,
   onDismiss,
   isAnonymous = false,
+  creditsRemaining = 0,
 }: Props) {
   const { assessments_cap: cap, reset_date: resetDate } = payload;
+  const hasCredits = !isAnonymous && creditsRemaining > 0;
 
   const headline = isAnonymous
     ? "You've used your free assessment."
@@ -36,9 +39,15 @@ export default function CapReachedPrompt({
       ? "You've used all 5 assessments this month."
       : `You've used all ${cap} assessments this month.`;
 
-  const primaryHref = isAnonymous ? "/auth/signup" : "/pricing";
+  const primaryHref = isAnonymous
+    ? "/auth/signup"
+    : hasCredits
+      ? "/pricing#credit-packs"
+      : "/pricing";
   const primaryLabel = isAnonymous
     ? "Create a free account"
+    : hasCredits
+      ? "Use your credits"
     : cap === 5
       ? "Upgrade to Pro"
       : "Upgrade now";
@@ -105,7 +114,39 @@ export default function CapReachedPrompt({
         >
           {primaryLabel}
         </Link>
-        {!isAnonymous && (
+        {hasCredits ? (
+          <p
+            style={{
+              fontSize: "0.8125rem",
+              color: "rgba(244,239,230,0.55)",
+              margin: "2px 0 0",
+              fontFamily: "var(--font-body), sans-serif",
+            }}
+          >
+            You have {creditsRemaining} credits available
+          </p>
+        ) : null}
+        {!isAnonymous && hasCredits ? (
+          <Link
+            href="/pricing"
+            className="btn-ghost-gold"
+            style={{
+              display: "inline-block",
+              textAlign: "center",
+              minWidth: 200,
+              padding: "10px 18px",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              fontFamily: "var(--font-body), sans-serif",
+              borderWidth: "1.5px",
+              borderColor: GOLD,
+              color: "#F4EFE6",
+              textDecoration: "none",
+            }}
+          >
+            Upgrade now
+          </Link>
+        ) : !isAnonymous ? (
           <Link
             href="/auth/signin"
             className="btn-ghost-gold"
@@ -125,7 +166,7 @@ export default function CapReachedPrompt({
           >
             Sign in to a different account
           </Link>
-        )}
+        ) : null}
         {onDismiss && (
           <button
             type="button"

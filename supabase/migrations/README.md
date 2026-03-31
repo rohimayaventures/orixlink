@@ -65,6 +65,21 @@ SELECT cron.schedule(
 Replace `YOUR_CRON_SECRET` with the value
 of your `CRON_SECRET` environment variable.
 
+After running 017, schedule the anonymous
+data retention cleanup job manually in
+Supabase SQL editor (same manual pattern):
+
+```sql
+SELECT cron.schedule(
+  'delete-old-anonymous-assessments',
+  '0 3 * * *',
+  $$
+  DELETE FROM public.anonymous_assessments
+  WHERE created_at < now() - interval '30 days';
+  $$
+);
+```
+
 ## Production database
 
 The production database at Supabase project

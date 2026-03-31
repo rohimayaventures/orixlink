@@ -1164,6 +1164,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
                   payload={capPayload}
                   onDismiss={() => setCapPayload(null)}
                   isAnonymous={!user}
+                  creditsRemaining={capPayload.credits_remaining ?? 0}
                 />
               )}
 
