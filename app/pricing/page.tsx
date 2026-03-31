@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CheckIcon, Cross2Icon } from "@radix-ui/react-icons";
 import AppShell from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
+import { useSubscriptionUsage } from "@/components/SubscriptionUsageProvider";
 
 const GOLD = "var(--gold)";
 const ON_DARK = "var(--text-on-dark)";
@@ -63,6 +64,8 @@ function FeatureLine({ ok, children }: { ok: boolean; children: ReactNode }) {
 export default function PricingPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { tier } = useSubscriptionUsage();
+  const creditEligible = tier === "pro" || tier === "family" || tier === "lifetime";
   const [billing, setBilling] = useState<"annual" | "monthly">("annual");
 
   async function handleCheckout(priceKey: string) {
@@ -193,7 +196,7 @@ export default function PricingPage() {
               <FeatureLine ok>Anonymous or signed-in</FeatureLine>
               <FeatureLine ok>Legal disclaimer included</FeatureLine>
               <FeatureLine ok={false}>Symptom history</FeatureLine>
-              <FeatureLine ok={false}>PDF export</FeatureLine>
+              <FeatureLine ok>Print and share assessment</FeatureLine>
               <FeatureLine ok={false}>Follow-up reminders</FeatureLine>
             </ul>
             <Link
@@ -434,20 +437,29 @@ export default function PricingPage() {
                   <p className="text-xs mb-6" style={{ color: ON_DARK, fontFamily: "var(--font-body), sans-serif" }}>
                     Save {pack.savePct}% vs $0.25 pay-per-tap
                   </p>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleCheckout(pack.key)}
-                    className="mt-auto w-full py-2.5 rounded-lg text-sm font-semibold border disabled:opacity-50"
-                    style={{
-                      borderColor: GOLD,
-                      color: ON_DARK,
-                      fontFamily: "var(--font-body), sans-serif",
-                      background: "transparent",
-                    }}
-                  >
-                    Add to account
-                  </button>
+                  {creditEligible ? (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleCheckout(pack.key)}
+                      className="mt-auto w-full py-2.5 rounded-lg text-sm font-semibold border disabled:opacity-50"
+                      style={{
+                        borderColor: GOLD,
+                        color: ON_DARK,
+                        fontFamily: "var(--font-body), sans-serif",
+                        background: "transparent",
+                      }}
+                    >
+                      Add to account
+                    </button>
+                  ) : (
+                    <p
+                      className="mt-auto w-full py-2.5 text-center text-sm font-medium"
+                      style={{ color: MUTED, fontFamily: "var(--font-body), sans-serif" }}
+                    >
+                      Available on Pro and above
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

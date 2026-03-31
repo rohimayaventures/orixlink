@@ -138,9 +138,11 @@ The dark background and gold accent were chosen to signal institutional authorit
 |------|-------|-----|-------|
 | Free | $0 | 5/month | Haiku |
 | Pro | $19/mo or $190/yr | 150/month | Sonnet |
-| Family | $34/mo or $340/yr | 300/month, 6 members | Sonnet |
+| Family | $34/mo or $340/yr | 600/month, 6 members | Sonnet |
 | Clinical | $99/mo or $990/yr | 200/month, 3 seats | Sonnet |
-| Lifetime | $249 one-time | 100/month | Sonnet |
+| Lifetime | $249 one-time | 100/month, includes 2 dependent profiles | Sonnet |
+
+> **Note:** Clinical tier is B2B tier scaffolded, not yet live. Available post B2C validation.
 
 **Credit packs (Pro and Family):**
 
@@ -150,7 +152,6 @@ The dark background and gold accent were chosen to signal institutional authorit
 | Standard | 75 | $12 | 74% |
 | Value | 150 | $20 | 69% |
 | Power | 300 | $35 | 64% |
-| Clinic Boost | 500 | $75 | 72% |
 
 **API cost reference:** Haiku ~$0.014/session, Sonnet ~$0.042/session. At full Pro cap (150 sessions), API cost is $6.30 against $19 revenue. Break-even at 4 Pro subscribers per 1,000 free users.
 
@@ -217,7 +218,7 @@ The dark background and gold accent were chosen to signal institutional authorit
 | Piece | Implementation |
 |-------|----------------|
 | Framework | Next.js 16 App Router |
-| AI | Claude API -- `claude-sonnet-4-20250514` for Pro/Family/Clinical/Lifetime, `claude-3-5-haiku-20241022` for Free tier |
+| AI | Claude API -- `claude-sonnet-4-20250514` for Pro/Family/Clinical/Lifetime, `claude-haiku-4-5-20251001` for Free tier |
 | Prompt architecture | System prompt with urgency tier hierarchy, red flag criteria, differential ranking structure, refusal protocol for emergency patterns, section token enforcement for `parseAssessment` consumer |
 | Output contract | Fixed section tokens parsed by `lib/parseAssessment.ts` into typed React components -- differential, red flags, urgency, disclaimer |
 | Persistence | Supabase -- sessions, messages, subscriptions, usage_tracking, credits, reminders, webhook_events, anonymous_assessments, profiles, dependents, practice_accounts, practice_seats, practice_sessions |
@@ -263,10 +264,10 @@ The dark background and gold accent were chosen to signal institutional authorit
 | PDF export via dedicated pipeline | Not built -- browser print only | Railway + Puppeteer microservice on roadmap. Browser print is the current implementation. This is an intentional deferral documented as a future pivot -- the print-to-PDF pattern works for the current use case and the dedicated pipeline ships when the Railway infrastructure is built. |
 | Lifetime 90-day retirement enforcement | Copy only | Enforcement requires archiving the Stripe price in the Stripe Dashboard after 90 days. Not a code change. Documented in status matrix. |
 | pg_cron operational verification | Manual SQL | The cron job must be created in Supabase SQL editor. Not verifiable from the repo alone. Documented in supabase/migrations/README.md. |
-| Family member invite flow | Not built | Family tier exists in billing. Member management and invite UI are Phase 4 roadmap. |
+| Family member invite flow | Shipped | Full invite (email + code), code join, and member management complete. Family usage dashboard, per-member breakdown, daily limits, and owner cancellation cascade all implemented. |
 | Clinical practice dashboard | Scaffolded | Tables exist (practice_accounts, practice_seats, practice_sessions). Provider dashboard UI is Phase 5 roadmap. |
 | Reminder partial send idempotency | Not hardened | Send route processes up to 50 reminders per run. Partial batch failures are logged but not retried automatically. |
-| Anonymous 30-day data deletion | Policy stated, job not verified | Legal page states 30-day retention. Operational deletion job not visible in repo. Requires a Supabase cron or scheduled function. |
+| Anonymous 30-day data deletion | Migration written, verify active | Migration 017 defines pg_cron job for 30-day deletion. Verify active in Supabase pg_cron dashboard before launch. |
 | Apple App Store / Google Play submission | Not started | PWA infrastructure complete. App store submission is Phase 6 roadmap. |
 | Webhook metadata missing -- no auto-recovery | Logged, not recovered | If Stripe sends a webhook with missing user_id metadata, the handler logs and breaks. No automatic reconciliation. Requires manual Stripe dashboard review. |
 
