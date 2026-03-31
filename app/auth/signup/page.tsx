@@ -1,22 +1,86 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckIcon } from "@radix-ui/react-icons";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
+import { Cross2Icon } from "@radix-ui/react-icons";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import AppShell from "@/components/AppShell";
 
 type Tier = "free" | "pro" | "family";
-type Phase = "idle" | "checkout";
+type Billing = "annual" | "monthly";
 
-function priceKeyFor(tier: Tier, billing: "annual" | "monthly"): string | null {
+type PlanDef = {
+  id: Tier;
+  name: string;
+  annualPrice: string;
+  monthlyPrice: string;
+  annualNote?: string;
+  features: string[];
+  cta: string;
+  recommended?: boolean;
+};
+
+const BG = "#080C14";
+const CARD = "#0D1220";
+const TEXT = "#F4EFE6";
+const MUTED = "rgba(244,239,230,0.5)";
+const GOLD = "#C8A96E";
+const BORDER = "1px solid rgba(255,255,255,0.07)";
+
+const PLANS: PlanDef[] = [
+  {
+    id: "free",
+    name: "Free",
+    annualPrice: "$0",
+    monthlyPrice: "$0",
+    features: [
+      "5 assessments / month",
+      "Standard analysis",
+      "Core triage and differential",
+      "Anonymous or signed-in",
+      "Legal disclaimer included",
+    ],
+    cta: "Sign up free",
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    annualPrice: "$15.83",
+    monthlyPrice: "$19",
+    annualNote: "Billed $190/yr · save $38",
+    features: [
+      "150 assessments / month",
+      "Deep analysis (Sonnet)",
+      "Full history and exports",
+      "Follow-up reminders",
+      "Dependent profiles (up to 2)",
+      "Credit packs available",
+    ],
+    cta: "Sign up for Pro",
+    recommended: true,
+  },
+  {
+    id: "family",
+    name: "Family",
+    annualPrice: "$28.33",
+    monthlyPrice: "$34",
+    annualNote: "Billed $340/yr · save $68",
+    features: [
+      "300 assessments / month shared",
+      "Up to 6 members",
+      "Deep analysis (Sonnet)",
+      "Dependent profiles (up to 6)",
+      "Family usage dashboard",
+      "Credit packs available",
+    ],
+    cta: "Sign up for Family",
+  },
+];
+
+function priceKeyFor(tier: Tier, billing: Billing): string | null {
   if (tier === "free") return null;
-  if (tier === "pro")
-    return billing === "annual" ? "pro-annual" : "pro-monthly";
+  if (tier === "pro") return billing === "annual" ? "pro-annual" : "pro-monthly";
   return billing === "annual" ? "family-annual" : "family-monthly";
 }
 
@@ -24,8 +88,8 @@ function AuthSignUpInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/assessment";
-  const signInHref = `/auth/signin?redirect=${encodeURIComponent(redirect)}`;
+  const supabase = createClient();
+
   const familyCode = searchParams.get("family_code");
   const planParamRaw = (searchParams.get("plan") || "").toLowerCase();
   const planParam: Tier | null =
@@ -33,18 +97,76 @@ function AuthSignUpInner() {
       ? (planParamRaw as Tier)
       : null;
 
-  const [tier, setTier] = useState<Tier>(planParam ?? "free");
-  const [billing, setBilling] = useState<"annual" | "monthly">("annual");
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [checkoutError, setCheckoutError] = useState(false);
+  const [billing, setBilling] = useState<Billing>("annual");
+  const [selectedPlan, setSelectedPlan] = useState<Tier | null>(planParam);
+  const [modalOpen, setModalOpen] = useState(Boolean(planParam));
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const checkoutStarted = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [formError, setFormError] = useState("");
+  const processingPostAuthRef = useRef(false);
   const familyJoinHandled = useRef(false);
-  const supabase = createClient();
 
   useEffect(() => {
-    if (planParam) setTier(planParam);
+    if (planParam) {
+      setSelectedPlan(planParam);
+      setModalOpen(true);
+    }
   }, [planParam]);
+
+  const selectedPlanDef = useMemo(
+    () => PLANS.find((p) => p.id === selectedPlan) ?? null,
+    [selectedPlan]
+  );
+
+  const selectedPlanPriceText = useMemo(() => {
+    if (!selectedPlanDef) return "";
+    const price =
+      selectedPlanDef.id === "free"
+        ? "$0/mo"
+        : billing === "annual"
+          ? `${selectedPlanDef.annualPrice}/mo`
+          : `${selectedPlanDef.monthlyPrice}/mo`;
+    return `You selected ${selectedPlanDef.name} · ${price}`;
+  }, [selectedPlanDef, billing]);
+
+  async function startCheckout(plan: Tier): Promise<void> {
+    const priceKey = priceKeyFor(plan, billing);
+    if (!priceKey) return;
+    const response = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "subscription", priceKey }),
+    });
+    const data = (await response.json()) as { url?: string; error?: string };
+    if (data.url) {
+      window.location.href = data.url;
+      return;
+    }
+    throw new Error(data.error || "Could not start checkout");
+  }
+
+  useEffect(() => {
+    if (loading || !user || !selectedPlan || processingPostAuthRef.current) return;
+    if (familyCode?.trim()) return;
+    processingPostAuthRef.current = true;
+
+    void (async () => {
+      try {
+        if (selectedPlan === "free") {
+          router.replace("/dashboard");
+          return;
+        }
+        await startCheckout(selectedPlan);
+      } catch (e) {
+        console.error("post-auth checkout", e);
+        setCheckoutError("We created your account but could not start checkout. Please try again.");
+        processingPostAuthRef.current = false;
+      }
+    })();
+  }, [loading, user, selectedPlan, familyCode, router, billing]);
 
   useEffect(() => {
     if (loading) return;
@@ -52,395 +174,493 @@ function AuthSignUpInner() {
     if (!familyCode?.trim()) return;
     if (familyJoinHandled.current) return;
     familyJoinHandled.current = true;
+
     void (async () => {
+      const code = familyCode.trim().toUpperCase();
       const res = await fetch("/api/family/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inviteCode: familyCode.trim().toUpperCase(),
-        }),
+        body: JSON.stringify({ inviteCode: code }),
       });
       if (res.ok) {
         router.replace("/?family_welcome=1");
       } else {
-        router.replace(
-          `/account?join_family=${encodeURIComponent(familyCode.trim().toUpperCase())}`
-        );
+        router.replace(`/account?join_family=${encodeURIComponent(code)}`);
       }
     })();
   }, [loading, user, familyCode, router]);
 
-  useEffect(() => {
-    if (loading) return;
-    if (user && phase === "idle") {
-      if (familyCode?.trim()) return;
-      if (planParam === "free") {
-        router.replace("/dashboard");
-        return;
+  function openPlanModal(plan: Tier) {
+    setSelectedPlan(plan);
+    setFormError("");
+    setCheckoutError("");
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setFormError("");
+    setCheckoutError("");
+    if (!planParam) setSelectedPlan(null);
+  }
+
+  async function handleGoogleSignUp() {
+    if (!selectedPlan || !ageConfirmed || submitting) return;
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const callbackNext = `/auth/signup?plan=${selectedPlan}`;
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}`
+          : undefined;
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+      if (error) {
+        setFormError(error.message || "Could not start Google sign up.");
       }
-      if (planParam === "pro" || planParam === "family") {
-        setPhase("checkout");
-        return;
-      }
-      const redirectTo = searchParams.get("redirect");
-      if (
-        redirectTo &&
-        redirectTo.startsWith("/") &&
-        !redirectTo.startsWith("//")
-      ) {
-        router.replace(redirectTo);
-      } else {
-        router.replace("/account");
-      }
+    } finally {
+      setSubmitting(false);
     }
-  }, [loading, user, phase, router, searchParams, familyCode]);
+  }
 
-  useEffect(() => {
-    if (phase !== "checkout" || !user) return;
-    if (checkoutStarted.current) return;
-    const key = priceKeyFor(tier, billing);
-    if (!key) return;
-    checkoutStarted.current = true;
-    setCheckoutError(false);
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "subscription", priceKey: key }),
-        });
-        let data: { url?: string; error?: string } = {};
-        try {
-          data = await res.json();
-        } catch (parseErr) {
-          console.error("Checkout session creation failed:", parseErr);
-          if (!cancelled) {
-            checkoutStarted.current = false;
-            setCheckoutError(true);
-            setPhase("idle");
-          }
-          return;
-        }
-        if (cancelled) return;
-        if (data.url) {
-          window.location.href = data.url;
-          return;
-        }
-        console.error("Checkout session creation failed:", {
-          status: res.status,
-          body: data,
-        });
-        checkoutStarted.current = false;
-        setCheckoutError(true);
-        setPhase("idle");
-      } catch (error) {
-        console.error("Checkout session creation failed:", error);
-        if (!cancelled) {
-          checkoutStarted.current = false;
-          setCheckoutError(true);
-          setPhase("idle");
-        }
+  async function handleEmailSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedPlan || !ageConfirmed || submitting) return;
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const callbackNext = `/auth/signup?plan=${selectedPlan}`;
+      const emailRedirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}`
+          : undefined;
+
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo },
+      });
+
+      if (error) {
+        setFormError(error.message || "Could not create account.");
+        setSubmitting(false);
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [phase, user, tier, billing]);
 
-  const showPaidToggle = tier === "pro" || tier === "family";
-  const redirectToAuthCallback =
-    typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "";
-  const selectedPlanPrice =
-    tier === "free"
-      ? "$0/mo"
-      : tier === "pro"
-        ? billing === "annual"
-          ? "$15.83/mo"
-          : "$19/mo"
-        : billing === "annual"
-          ? "$28.33/mo"
-          : "$34/mo";
-  const showPlanSelection = !planParam;
+      // If email confirmation is enabled, keep user informed in place.
+      setFormError(
+        "Check your email to confirm your account, then continue from the same plan link."
+      );
+      setSubmitting(false);
+    } catch {
+      setFormError("Could not create account.");
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <AppShell contentTopPadding={96}>
-      <div className="px-5 sm:px-8 pb-20 max-w-5xl mx-auto">
-        <p
-          className="font-mono text-[0.6875rem] tracking-[0.14em] uppercase text-center mb-3"
-          style={{ color: "var(--gold-muted)" }}
-        >
-          Create account
-        </p>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: BG,
+        color: TEXT,
+        padding: "32px 16px 40px",
+        overflowX: "hidden",
+      }}
+    >
+      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <h1
-          className="font-display text-center text-3xl sm:text-4xl font-medium mb-2"
-          style={{ color: "var(--text-on-dark)" }}
+          className="font-display"
+          style={{ textAlign: "center", fontSize: "clamp(2rem,4.2vw,3rem)", marginBottom: 10 }}
         >
           Choose your plan
         </h1>
         <p
-          className="text-center text-sm sm:text-base mb-8 max-w-xl mx-auto"
-          style={{ color: "var(--text-muted-dark)", fontFamily: "var(--font-body), sans-serif" }}
+          style={{
+            textAlign: "center",
+            color: MUTED,
+            marginBottom: 28,
+            fontFamily: "var(--font-body), sans-serif",
+          }}
         >
-          Start free or subscribe in one step. After you sign up with email or Google, we&apos;ll
-          send you to secure checkout for paid plans.
+          Start free or subscribe in one step.
         </p>
 
-        {planParam && (
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
           <div
-            className="text-center rounded-xl border mb-8 p-4"
             style={{
-              borderColor: "rgba(200,169,110,0.3)",
-              background: "rgba(200,169,110,0.06)",
+              display: "inline-flex",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 999,
+              padding: 4,
+              background: "#111827",
+              gap: 4,
             }}
           >
-            <p
-              className="font-mono text-[0.6875rem] tracking-[0.12em] uppercase mb-1"
-              style={{ color: "var(--gold-muted)" }}
-            >
-              Selected plan
-            </p>
-            <p
-              className="font-display text-xl"
-              style={{ color: "var(--text-on-dark)" }}
-            >
-              You selected {tier === "free" ? "Free" : tier === "pro" ? "Pro" : "Family"} · {selectedPlanPrice}
-            </p>
-          </div>
-        )}
-
-        {showPlanSelection && showPaidToggle && (
-          <div className="flex justify-center mb-8">
-            <div
-              className="inline-flex p-1 rounded-full border gap-1"
+            <button
+              type="button"
+              onClick={() => setBilling("annual")}
               style={{
-                borderColor: "var(--obsidian-muted)",
-                background: "var(--obsidian-mid)",
+                minHeight: 44,
+                padding: "0 16px",
+                borderRadius: 999,
+                border: billing === "annual" ? "1px solid rgba(200,169,110,0.35)" : "1px solid transparent",
+                background: billing === "annual" ? "rgba(200,169,110,0.2)" : "transparent",
+                color: billing === "annual" ? GOLD : MUTED,
+                cursor: "pointer",
+                transition: "all 200ms ease",
+                fontFamily: "var(--font-body), sans-serif",
               }}
             >
-              <button
-                type="button"
-                onClick={() => setBilling("annual")}
-                className="px-4 py-2 rounded-full text-xs font-semibold font-mono uppercase tracking-wide"
-                style={{
-                  background: billing === "annual" ? "rgba(200,169,110,0.2)" : "transparent",
-                  color: billing === "annual" ? "var(--gold)" : "var(--text-muted-dark)",
-                  border: billing === "annual" ? "1px solid rgba(200,169,110,0.35)" : "1px solid transparent",
-                }}
-              >
-                Annual
-              </button>
-              <button
-                type="button"
-                onClick={() => setBilling("monthly")}
-                className="px-4 py-2 rounded-full text-xs font-semibold font-mono uppercase tracking-wide"
-                style={{
-                  background: billing === "monthly" ? "rgba(200,169,110,0.2)" : "transparent",
-                  color: billing === "monthly" ? "var(--gold)" : "var(--text-muted-dark)",
-                  border: billing === "monthly" ? "1px solid rgba(200,169,110,0.35)" : "1px solid transparent",
-                }}
-              >
-                Monthly
-              </button>
-            </div>
+              Annual
+            </button>
+            <button
+              type="button"
+              onClick={() => setBilling("monthly")}
+              style={{
+                minHeight: 44,
+                padding: "0 16px",
+                borderRadius: 999,
+                border: billing === "monthly" ? "1px solid rgba(200,169,110,0.35)" : "1px solid transparent",
+                background: billing === "monthly" ? "rgba(200,169,110,0.2)" : "transparent",
+                color: billing === "monthly" ? GOLD : MUTED,
+                cursor: "pointer",
+                transition: "all 200ms ease",
+                fontFamily: "var(--font-body), sans-serif",
+              }}
+            >
+              Monthly
+            </button>
           </div>
-        )}
+        </div>
 
-        {showPlanSelection && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-          {(
-            [
-              {
-                id: "free" as const,
-                name: "Free",
-                blurb: "5 assessments / month · Core features",
-                price: "$0",
-                sub: "/mo",
-              },
-              {
-                id: "pro" as const,
-                name: "Pro",
-                blurb: "150 assessments / month · Full history & exports",
-                price: billing === "annual" ? "$15.83" : "$19",
-                sub: "/mo",
-                extra:
-                  billing === "annual" ? "Billed $190/yr · save $38" : "Billed monthly",
-              },
-              {
-                id: "family" as const,
-                name: "Family",
-                blurb: "300 assessments / month · Up to 6 members",
-                price: billing === "annual" ? "$28.33" : "$34",
-                sub: "/mo",
-                extra:
-                  billing === "annual" ? "Billed $340/yr · save $68" : "Billed monthly",
-              },
-            ] as const
-          ).map((card) => {
-            const selected = tier === card.id;
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 16,
+            opacity: modalOpen ? 0.4 : 1,
+            transition: "opacity 200ms ease",
+          }}
+        >
+          {PLANS.map((plan) => {
+            const displayPrice =
+              plan.id === "free"
+                ? "$0"
+                : billing === "annual"
+                  ? plan.annualPrice
+                  : plan.monthlyPrice;
+            const note =
+              plan.id === "free"
+                ? null
+                : billing === "annual"
+                  ? plan.annualNote
+                  : "Billed monthly";
+
             return (
-              <button
-                key={card.id}
-                type="button"
-                onClick={() => setTier(card.id)}
-                className="text-left rounded-xl p-6 border-2 transition-all card-dark"
+              <div
+                key={plan.id}
                 style={{
-                  borderColor: selected ? "var(--gold)" : "var(--obsidian-muted)",
-                  boxShadow: selected
-                    ? "0 0 0 1px rgba(200,169,110,0.25), 0 8px 32px rgba(0,0,0,0.35)"
-                    : undefined,
-                  background: "var(--obsidian-mid)",
+                  background: CARD,
+                  border: plan.recommended ? "1px solid rgba(200,169,110,0.45)" : BORDER,
+                  borderRadius: 16,
+                  padding: 22,
+                  boxShadow: plan.recommended
+                    ? "0 0 0 1px rgba(200,169,110,0.2)"
+                    : "none",
                 }}
               >
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="font-display text-xl" style={{ color: "var(--text-on-dark)" }}>
-                    {card.name}
-                  </span>
-                  {selected && (
-                    <CheckIcon className="w-5 h-5 shrink-0" style={{ color: "var(--gold)" }} />
-                  )}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <h2 className="font-display" style={{ fontSize: 30, color: TEXT }}>
+                    {plan.name}
+                  </h2>
+                  {plan.recommended ? (
+                    <span
+                      style={{
+                        borderRadius: 999,
+                        padding: "4px 10px",
+                        fontSize: 11,
+                        color: BG,
+                        background: GOLD,
+                        fontFamily: "var(--font-mono)",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Recommended
+                    </span>
+                  ) : null}
                 </div>
-                <div className="mb-3">
-                  <span className="font-mono text-2xl font-semibold" style={{ color: "var(--gold)" }}>
-                    {card.price}
+
+                <div style={{ marginTop: 6, marginBottom: 14 }}>
+                  <span className="font-mono" style={{ fontSize: 32, color: GOLD }}>
+                    {displayPrice}
                   </span>
-                  <span className="text-sm ml-1" style={{ color: "var(--text-muted-dark)" }}>
-                    {card.sub}
-                  </span>
+                  <span style={{ marginLeft: 4, color: MUTED }}>/mo</span>
+                  {note ? (
+                    <p style={{ color: MUTED, marginTop: 6, fontSize: 13, fontFamily: "var(--font-body), sans-serif" }}>
+                      {note}
+                    </p>
+                  ) : null}
                 </div>
-                {"extra" in card && card.extra && (
-                  <p className="font-mono text-xs mb-3" style={{ color: "var(--text-muted-dark)" }}>
-                    {card.extra}
-                  </p>
-                )}
-                <p className="text-sm leading-snug" style={{ color: "var(--text-muted-dark)" }}>
-                  {card.blurb}
-                </p>
-              </button>
+
+                <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, lineHeight: 1.7, marginBottom: 20 }}>
+                  {plan.features.map((f) => (
+                    <li key={f} style={{ marginBottom: 2 }}>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  type="button"
+                  onClick={() => openPlanModal(plan.id)}
+                  style={{
+                    width: "100%",
+                    minHeight: 44,
+                    border: "none",
+                    borderRadius: 10,
+                    background: GOLD,
+                    color: BG,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "opacity 200ms ease",
+                    fontFamily: "var(--font-body), sans-serif",
+                  }}
+                >
+                  {plan.cta}
+                </button>
+              </div>
             );
           })}
         </div>
-        )}
 
-        <label
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "10px",
-            cursor: "pointer",
-            margin: "0 auto 16px",
-            maxWidth: "480px",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={ageConfirmed}
-            onChange={(e) => setAgeConfirmed(e.target.checked)}
-            style={{ marginTop: "3px", flexShrink: 0 }}
-          />
-          <span
+        <p style={{ textAlign: "center", marginTop: 26 }}>
+          <Link
+            href="/auth/signin"
             style={{
-              fontSize: "12px",
-              color: "rgba(244,239,230,0.5)",
-              lineHeight: "1.6",
+              color: GOLD,
+              textDecoration: "none",
+              fontFamily: "var(--font-body), sans-serif",
             }}
           >
-            I confirm I am 18 years of age or older.
-            OrixLink AI is for adults only. To assess
-            a child, create an account and add them
-            as a dependent profile.
-          </span>
-        </label>
+            Already have an account? Sign in
+          </Link>
+        </p>
+      </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+      {modalOpen && selectedPlanDef ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
           <div
             style={{
               width: "100%",
               maxWidth: 420,
-              opacity: ageConfirmed ? 1 : 0.6,
-              pointerEvents: ageConfirmed ? "auto" : "none",
+              background: "#0D1220",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 16,
+              padding: "24px 20px 20px",
+              position: "relative",
             }}
           >
-            <Auth
-              supabaseClient={supabase}
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: "#C8A96E",
-                      brandAccent: "#080C14",
-                      brandButtonText: "#080C14",
-                      defaultButtonBackground: "#C8A96E",
-                      defaultButtonText: "#080C14",
-                      anchorTextColor: "#C8A96E",
-                      inputBackground: "#0D1117",
-                      inputText: "#F4EFE6",
-                      inputPlaceholder: "rgba(244,239,230,0.45)",
-                      messageText: "rgba(244,239,230,0.85)",
-                      messageTextDanger: "#C0392B",
-                      dividerBackground: "rgba(200,169,110,0.25)",
-                    },
-                  },
-                },
-              }}
-              providers={["google"]}
-              redirectTo={redirectToAuthCallback}
-              onlyThirdPartyProviders={false}
-              magicLink={false}
-              showLinks={true}
-              view="sign_up"
-            />
-          </div>
-        </div>
-
-        {checkoutError && (
-          <p
-            role="alert"
-            style={{
-              backgroundColor: "rgba(200,169,110,0.08)",
-              border: "1px solid rgba(200,169,110,0.3)",
-              color: "#C8A96E",
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "13px",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              marginTop: "16px",
-              textAlign: "center",
-            }}
-          >
-            We created your account but could not start checkout. Please go to{" "}
-            <Link
-              href="/pricing"
+            <button
+              type="button"
+              onClick={closeModal}
+              aria-label="Close"
               style={{
-                color: "#C8A96E",
-                textDecoration: "underline",
+                position: "absolute",
+                top: 12,
+                right: 12,
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                color: MUTED,
                 cursor: "pointer",
               }}
             >
-              Pricing
-            </Link>{" "}
-            to select your plan.
-          </p>
-        )}
+              <Cross2Icon width={20} height={20} />
+            </button>
 
-        <p className="text-center text-sm" style={{ color: "var(--text-muted-dark)" }}>
-          <Link href="/pricing" style={{ color: "var(--gold)" }}>
-            Full plan comparison
-          </Link>
-          {" · "}
-          <Link href="/" style={{ color: "var(--gold-muted)" }}>
-            Back to home
-          </Link>
-        </p>
-        <p className="text-center text-sm mt-6" style={{ color: "var(--text-muted-dark)" }}>
-          Already have an account?{" "}
-          <Link href={signInHref} style={{ color: "var(--gold)" }}>
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </AppShell>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 12,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: GOLD,
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {selectedPlanPriceText}
+            </p>
+
+            <button
+              type="button"
+              disabled={!ageConfirmed || submitting}
+              onClick={handleGoogleSignUp}
+              style={{
+                width: "100%",
+                minHeight: 44,
+                marginTop: 14,
+                borderRadius: 8,
+                border: "none",
+                background: GOLD,
+                color: BG,
+                fontWeight: 700,
+                cursor: !ageConfirmed || submitting ? "not-allowed" : "pointer",
+                opacity: !ageConfirmed || submitting ? 0.55 : 1,
+                fontFamily: "var(--font-body), sans-serif",
+              }}
+            >
+              Continue with Google
+            </button>
+
+            <div
+              style={{
+                height: 1,
+                background: "rgba(200,169,110,0.25)",
+                margin: "16px 0",
+              }}
+            />
+
+            <form onSubmit={handleEmailSignUp}>
+              <label
+                htmlFor="signup-email"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 13,
+                  color: "rgba(244,239,230,0.85)",
+                  fontFamily: "var(--font-body), sans-serif",
+                }}
+              >
+                Email address
+              </label>
+              <input
+                id="signup-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{
+                  width: "100%",
+                  minHeight: 44,
+                  marginBottom: 12,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "#141824",
+                  color: TEXT,
+                  padding: "0 12px",
+                }}
+              />
+
+              <label
+                htmlFor="signup-password"
+                style={{
+                  display: "block",
+                  marginBottom: 6,
+                  fontSize: 13,
+                  color: "rgba(244,239,230,0.85)",
+                  fontFamily: "var(--font-body), sans-serif",
+                }}
+              >
+                Create a password
+              </label>
+              <input
+                id="signup-password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  width: "100%",
+                  minHeight: 44,
+                  marginBottom: 12,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "#141824",
+                  color: TEXT,
+                  padding: "0 12px",
+                }}
+              />
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  marginBottom: 14,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={ageConfirmed}
+                  onChange={(e) => setAgeConfirmed(e.target.checked)}
+                  style={{ marginTop: 3, accentColor: GOLD }}
+                />
+                <span
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    color: MUTED,
+                    fontFamily: "var(--font-body), sans-serif",
+                  }}
+                >
+                  I confirm I am 18 years of age or older. OrixLink AI is for adults only. To assess a child, create an account and add them as a dependent profile.
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={!ageConfirmed || submitting}
+                style={{
+                  width: "100%",
+                  minHeight: 44,
+                  border: "none",
+                  borderRadius: 8,
+                  background: GOLD,
+                  color: BG,
+                  fontWeight: 700,
+                  cursor: !ageConfirmed || submitting ? "not-allowed" : "pointer",
+                  opacity: !ageConfirmed || submitting ? 0.55 : 1,
+                  fontFamily: "var(--font-body), sans-serif",
+                }}
+              >
+                Create account
+              </button>
+            </form>
+
+            {formError ? (
+              <p style={{ marginTop: 12, marginBottom: 0, color: GOLD, fontSize: 12, lineHeight: 1.5 }}>
+                {formError}
+              </p>
+            ) : null}
+            {checkoutError ? (
+              <p style={{ marginTop: 10, marginBottom: 0, color: "#FCA5A5", fontSize: 12, lineHeight: 1.5 }}>
+                {checkoutError}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </main>
   );
 }
 
@@ -448,14 +668,20 @@ export default function AuthSignUpPage() {
   return (
     <Suspense
       fallback={
-        <div
+        <main
           className="min-h-screen flex items-center justify-center"
-          style={{ background: "var(--obsidian)" }}
+          style={{ background: BG }}
         >
-          <p className="font-mono text-sm" style={{ color: "var(--gold-muted)" }}>
+          <p
+            style={{
+              color: MUTED,
+              fontFamily: "DM Sans, sans-serif",
+              fontSize: 14,
+            }}
+          >
             Loading…
           </p>
-        </div>
+        </main>
       }
     >
       <AuthSignUpInner />
