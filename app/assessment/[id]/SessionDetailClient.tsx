@@ -81,9 +81,14 @@ export default function SessionDetailClient({
 }) {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const parsed = lastAssistant ? parseAssessment(lastAssistant.content) : null;
-  const urgencyKey =
-    (session.urgency_level as string) || parsed?.urgencyLevel || "CONTACT_DOCTOR_TODAY";
-  const u = URGENCY[urgencyKey] || URGENCY.CONTACT_DOCTOR_TODAY;
+  const urgencyKey = (session.urgency_level as string) || parsed?.urgencyLevel || null;
+  const URGENCY_UNKNOWN = {
+    label: "Unable to determine urgency. Review the assessment details below.",
+    bg: "rgba(212,136,42,0.14)",
+    border: "rgba(212,136,42,0.45)",
+    color: "#D4882A",
+  };
+  const u = (urgencyKey && URGENCY[urgencyKey]) ? URGENCY[urgencyKey] : URGENCY_UNKNOWN;
   const urgencyText = (session.urgency_level || "").toLowerCase();
   const showEmergencyBanner =
     urgencyKey === "EMERGENCY_DEPARTMENT_NOW" ||

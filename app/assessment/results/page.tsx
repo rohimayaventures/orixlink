@@ -117,7 +117,7 @@ function buildShareText(
   symptoms: string,
   languageCode: string
 ): string {
-  const urgency = URGENCY[assessment.urgencyLevel]?.label || assessment.urgencyLevel
+  const urgency = (assessment.urgencyLevel && URGENCY[assessment.urgencyLevel]?.label) || assessment.urgencyLevel || 'URGENCY UNKNOWN'
   const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
   let text = `ORIXLINK AI — CLINICAL ASSESSMENT SUMMARY\n`
@@ -233,8 +233,29 @@ function EmergencyEnglishDuplicateBanner({ tier }: { tier: 'moderate' | 'low' })
   )
 }
 
-function UrgencyBanner({ level, explanation }: { level: string; explanation: string }) {
-  const cfg = URGENCY[level] || URGENCY.CONTACT_DOCTOR_TODAY
+function UrgencyBanner({ level, explanation }: { level: string | null; explanation: string }) {
+  if (!level || !URGENCY[level]) {
+    return (
+      <div
+        style={{
+          padding: '16px 20px',
+          borderRadius: 12,
+          marginBottom: 12,
+          background: 'rgba(212,136,42,0.14)',
+          border: '1px solid rgba(212,136,42,0.45)',
+          color: '#D4882A',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#D4882A', flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            Unable to determine urgency. Review the assessment details below.
+          </span>
+        </div>
+      </div>
+    )
+  }
+  const cfg = URGENCY[level]
   return (
     <div
       style={{
@@ -424,7 +445,7 @@ export default function ResultsPage() {
   const { tier } = useSubscriptionUsage()
   const [session, setSession] = useState<Record<string, string>>({})
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentUrgency, setCurrentUrgency] = useState('CONTACT_DOCTOR_TODAY')
+  const [currentUrgency, setCurrentUrgency] = useState<string | null>(null)
   const [followUps, setFollowUps] = useState<string[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -725,7 +746,14 @@ export default function ResultsPage() {
     printWindow.print()
   }
 
-  const urgencyCfg = URGENCY[currentUrgency] || URGENCY.CONTACT_DOCTOR_TODAY
+  const URGENCY_UNKNOWN = {
+    label: 'Urgency Unknown',
+    dotColor: '#D4882A',
+    badgeBg: 'rgba(212,136,42,0.14)',
+    badgeBorder: 'rgba(212,136,42,0.45)',
+    badgeText: '#D4882A',
+  }
+  const urgencyCfg = (currentUrgency && URGENCY[currentUrgency]) ? URGENCY[currentUrgency] : URGENCY_UNKNOWN
   const badgeTier = tier === 'lifetime' ? 'lifetime' : tier
 
   return (
@@ -895,7 +923,7 @@ export default function ResultsPage() {
         </div>
 
         {/* Follow-up chips */}
-        {followUps.length > 0 && !loading && (
+        {followUps.length > 0 && (
           <div aria-live="polite" style={{ paddingBottom: 12, flexShrink: 0 }}>
             <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: MUTED, letterSpacing: '0.08em', marginBottom: 8 }}>
               TAP TO ADD TO ASSESSMENT
@@ -904,19 +932,23 @@ export default function ResultsPage() {
               {followUps.map((p, i) => (
                 <button
                   key={i}
+                  disabled={loading}
                   onClick={() => send(p)}
                   style={{
                     padding: '7px 14px', borderRadius: 100, fontSize: '0.8125rem',
                     border: '1px solid rgba(255,255,255,0.1)',
                     background: '#141824',
                     color: TEXT,
-                    cursor: 'pointer', transition: 'all 0.2s',
+                    cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                    opacity: loading ? 0.4 : 1,
                     display: 'inline-flex', alignItems: 'center',
                     width: 'fit-content', whiteSpace: 'nowrap',
                   }}
                   onMouseEnter={(e) => {
-                    (e.target as HTMLButtonElement).style.borderColor = 'rgba(200,169,110,0.5)'
-                    ;(e.target as HTMLButtonElement).style.color = '#C8A96E'
+                    if (!loading) {
+                      (e.target as HTMLButtonElement).style.borderColor = 'rgba(200,169,110,0.5)'
+                      ;(e.target as HTMLButtonElement).style.color = '#C8A96E'
+                    }
                   }}
                   onMouseLeave={(e) => {
                     (e.target as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'

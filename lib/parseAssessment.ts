@@ -1,5 +1,5 @@
 export type ParsedAssessment = {
-  urgencyLevel: string
+  urgencyLevel: string | null
   urgencyExplanation: string
   differential: { likelihood: string; name: string; reason: string }[]
   redFlags: { flag: string; status: string }[]
@@ -14,7 +14,7 @@ export function parseAssessment(text: string): ParsedAssessment {
     if (text.includes('URGENT_CARE')) return 'URGENT_CARE'
     if (text.includes('CONTACT_DOCTOR_TODAY')) return 'CONTACT_DOCTOR_TODAY'
     if (text.includes('MONITOR_AT_HOME')) return 'MONITOR_AT_HOME'
-    return 'CONTACT_DOCTOR_TODAY'
+    return null
   })()
 
   const getSection = (key: string): string => {
@@ -70,8 +70,9 @@ export function parseAssessment(text: string): ParsedAssessment {
       .filter(l => l.length > 5).slice(0, 3)
   })()
 
-  const disclaimerMatch = text.match(/OrixLink AI provides[\s\S]*?call 911\./)
-  const disclaimer = disclaimerMatch?.[0] || 'OrixLink AI provides clinical support only. Not a diagnosis. If this is an emergency call 911.'
+  const disclaimerMatch = text.match(/OrixLink[\s\S]*$/i)
+  const disclaimer = disclaimerMatch?.[0]?.trim().split('\n').filter(l => l.trim()).pop()?.trim()
+    || 'OrixLink AI provides clinical support only. Not a diagnosis. If this is an emergency call 911.'
 
   return { urgencyLevel, urgencyExplanation, differential, redFlags, nextSteps, followUpPrompts, disclaimer }
 }

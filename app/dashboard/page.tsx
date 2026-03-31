@@ -277,10 +277,16 @@ export default async function DashboardPage() {
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
               {sessionsWithPreview.map((s) => {
                 const u = s.urgency_level;
+                const URGENCY_UNKNOWN_ROW = {
+                  label: "Urgency unknown",
+                  bg: "rgba(212,136,42,0.14)",
+                  border: "rgba(212,136,42,0.45)",
+                  color: "#D4882A",
+                };
                 const meta =
                   u && URGENCY_ROW[u]
                     ? URGENCY_ROW[u]
-                    : URGENCY_ROW.CONTACT_DOCTOR_TODAY;
+                    : URGENCY_UNKNOWN_ROW;
                 const dateStr = new Date(s.created_at).toLocaleDateString(
                   "en-US",
                   { month: "long", day: "numeric", year: "numeric" }
