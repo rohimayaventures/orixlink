@@ -18,7 +18,7 @@ export default function HeaderAuth({
   /** Hide Pricing link (e.g. in assessment flow where horizontal space is tight). */
   omitPricing?: boolean;
 }) {
-  const { user, loading, openAuthModal } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const usage = useSubscriptionUsage();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -98,10 +98,12 @@ export default function HeaderAuth({
         >
           Sign up
         </Link>
-        <button
-          type="button"
-          onClick={openAuthModal}
+        <Link
+          href="/auth/signin"
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
             padding: "8px 14px",
             borderRadius: 8,
             border: `1.5px solid ${gold}`,
@@ -109,12 +111,12 @@ export default function HeaderAuth({
             color: isDark ? gold : "var(--gold)",
             fontSize: "0.8125rem",
             fontWeight: 600,
-            cursor: "pointer",
+            textDecoration: "none",
             fontFamily: "var(--font-body), sans-serif",
           }}
         >
           Sign in
-        </button>
+        </Link>
       </div>
     );
   }

@@ -391,7 +391,7 @@ export default function AssessmentPage() {
   const anonGate = !user && hasUsedAnonAssessment()
 
   useEffect(() => {
-    if (anonGate) openAuthModal()
+    if (anonGate) openAuthModal("anonymous_cap")
   }, [anonGate, openAuthModal])
 
   async function handleSubmit() {
@@ -570,7 +570,7 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
             <p style={{ color: MUTED, marginBottom: '1.5rem', lineHeight: 1.6 }}>
               You have used your free anonymous assessment. Sign in to save results and continue with your included assessments.
             </p>
-            <button type="button" onClick={openAuthModal} className="orix-btn-gold" style={{ marginBottom: 12, width: '100%', padding: '14px 20px', borderRadius: 8 }}>
+              <button type="button" onClick={() => openAuthModal("anonymous_cap")} className="orix-btn-gold" style={{ marginBottom: 12, width: '100%', padding: '14px 20px', borderRadius: 8 }}>
               Sign in or create account
             </button>
             <button

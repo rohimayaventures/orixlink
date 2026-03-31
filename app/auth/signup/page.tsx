@@ -4,11 +4,14 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckIcon } from "@radix-ui/react-icons";
+import { Auth } from "@supabase/auth-ui-react";
+import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useAuth } from "@/components/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
 import AppShell from "@/components/AppShell";
 
 type Tier = "free" | "pro" | "family";
-type Phase = "idle" | "awaiting-auth" | "checkout";
+type Phase = "idle" | "checkout";
 
 function priceKeyFor(tier: Tier, billing: "annual" | "monthly"): string | null {
   if (tier === "free") return null;
@@ -18,20 +21,30 @@ function priceKeyFor(tier: Tier, billing: "annual" | "monthly"): string | null {
 }
 
 function AuthSignUpInner() {
-  const { user, loading, openAuthModal } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/assessment";
   const signInHref = `/auth/signin?redirect=${encodeURIComponent(redirect)}`;
   const familyCode = searchParams.get("family_code");
+  const planParamRaw = (searchParams.get("plan") || "").toLowerCase();
+  const planParam: Tier | null =
+    planParamRaw === "free" || planParamRaw === "pro" || planParamRaw === "family"
+      ? (planParamRaw as Tier)
+      : null;
 
-  const [tier, setTier] = useState<Tier>("free");
+  const [tier, setTier] = useState<Tier>(planParam ?? "free");
   const [billing, setBilling] = useState<"annual" | "monthly">("annual");
   const [phase, setPhase] = useState<Phase>("idle");
   const [checkoutError, setCheckoutError] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const checkoutStarted = useRef(false);
   const familyJoinHandled = useRef(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (planParam) setTier(planParam);
+  }, [planParam]);
 
   useEffect(() => {
     if (loading) return;
@@ -61,6 +74,14 @@ function AuthSignUpInner() {
     if (loading) return;
     if (user && phase === "idle") {
       if (familyCode?.trim()) return;
+      if (planParam === "free") {
+        router.replace("/dashboard");
+        return;
+      }
+      if (planParam === "pro" || planParam === "family") {
+        setPhase("checkout");
+        return;
+      }
       const redirectTo = searchParams.get("redirect");
       if (
         redirectTo &&
@@ -73,17 +94,6 @@ function AuthSignUpInner() {
       }
     }
   }, [loading, user, phase, router, searchParams, familyCode]);
-
-  useEffect(() => {
-    if (loading || !user) return;
-    if (phase !== "awaiting-auth") return;
-    if (familyCode?.trim() && tier === "free") return;
-    if (tier === "free") {
-      router.replace(redirect);
-      return;
-    }
-    setPhase("checkout");
-  }, [user, loading, phase, tier, redirect, router, familyCode]);
 
   useEffect(() => {
     if (phase !== "checkout" || !user) return;
@@ -138,13 +148,20 @@ function AuthSignUpInner() {
     };
   }, [phase, user, tier, billing]);
 
-  function handleCreateAccount() {
-    setCheckoutError(false);
-    setPhase("awaiting-auth");
-    openAuthModal();
-  }
-
   const showPaidToggle = tier === "pro" || tier === "family";
+  const redirectToAuthCallback =
+    typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "";
+  const selectedPlanPrice =
+    tier === "free"
+      ? "$0/mo"
+      : tier === "pro"
+        ? billing === "annual"
+          ? "$15.83/mo"
+          : "$19/mo"
+        : billing === "annual"
+          ? "$28.33/mo"
+          : "$34/mo";
+  const showPlanSelection = !planParam;
 
   return (
     <AppShell contentTopPadding={96}>
@@ -169,7 +186,30 @@ function AuthSignUpInner() {
           send you to secure checkout for paid plans.
         </p>
 
-        {showPaidToggle && (
+        {planParam && (
+          <div
+            className="text-center rounded-xl border mb-8 p-4"
+            style={{
+              borderColor: "rgba(200,169,110,0.3)",
+              background: "rgba(200,169,110,0.06)",
+            }}
+          >
+            <p
+              className="font-mono text-[0.6875rem] tracking-[0.12em] uppercase mb-1"
+              style={{ color: "var(--gold-muted)" }}
+            >
+              Selected plan
+            </p>
+            <p
+              className="font-display text-xl"
+              style={{ color: "var(--text-on-dark)" }}
+            >
+              You selected {tier === "free" ? "Free" : tier === "pro" ? "Pro" : "Family"} · {selectedPlanPrice}
+            </p>
+          </div>
+        )}
+
+        {showPlanSelection && showPaidToggle && (
           <div className="flex justify-center mb-8">
             <div
               className="inline-flex p-1 rounded-full border gap-1"
@@ -206,6 +246,7 @@ function AuthSignUpInner() {
           </div>
         )}
 
+        {showPlanSelection && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
           {(
             [
@@ -279,6 +320,7 @@ function AuthSignUpInner() {
             );
           })}
         </div>
+        )}
 
         <label
           style={{
@@ -311,29 +353,45 @@ function AuthSignUpInner() {
         </label>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
-          <button
-            type="button"
-            onClick={handleCreateAccount}
-            disabled={!ageConfirmed || loading || phase === "checkout"}
-            className="px-10 py-3.5 rounded-lg w-full sm:w-auto min-w-[240px]"
+          <div
             style={{
-              border: "none",
-              fontWeight: ageConfirmed ? 600 : undefined,
-              background: ageConfirmed
-                ? "#C8A96E"
-                : "rgba(200,169,110,0.25)",
-              color: ageConfirmed ? "#080C14" : "rgba(8,12,20,0.5)",
-              cursor:
-                !ageConfirmed || loading || phase === "checkout"
-                  ? "not-allowed"
-                  : "pointer",
-              opacity:
-                ageConfirmed && (loading || phase === "checkout") ? 0.65 : 1,
-              transition: "background 0.2s ease, color 0.2s ease",
+              width: "100%",
+              maxWidth: 420,
+              opacity: ageConfirmed ? 1 : 0.6,
+              pointerEvents: ageConfirmed ? "auto" : "none",
             }}
           >
-            {phase === "checkout" ? "Redirecting to checkout…" : "Create account & continue"}
-          </button>
+            <Auth
+              supabaseClient={supabase}
+              appearance={{
+                theme: ThemeSupa,
+                variables: {
+                  default: {
+                    colors: {
+                      brand: "#C8A96E",
+                      brandAccent: "#080C14",
+                      brandButtonText: "#080C14",
+                      defaultButtonBackground: "#C8A96E",
+                      defaultButtonText: "#080C14",
+                      anchorTextColor: "#C8A96E",
+                      inputBackground: "#0D1117",
+                      inputText: "#F4EFE6",
+                      inputPlaceholder: "rgba(244,239,230,0.45)",
+                      messageText: "rgba(244,239,230,0.85)",
+                      messageTextDanger: "#C0392B",
+                      dividerBackground: "rgba(200,169,110,0.25)",
+                    },
+                  },
+                },
+              }}
+              providers={["google"]}
+              redirectTo={redirectToAuthCallback}
+              onlyThirdPartyProviders={false}
+              magicLink={false}
+              showLinks={true}
+              view="sign_up"
+            />
+          </div>
         </div>
 
         {checkoutError && (

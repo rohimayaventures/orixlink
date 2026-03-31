@@ -67,7 +67,19 @@ export default function PricingPage() {
 
   async function handleCheckout(priceKey: string) {
     if (!user) {
-      router.push("/auth/signup?redirect=/pricing");
+      if (priceKey === "pro-annual" || priceKey === "pro-monthly") {
+        router.push("/auth/signup?plan=pro");
+        return;
+      }
+      if (priceKey === "family-annual" || priceKey === "family-monthly") {
+        router.push("/auth/signup?plan=family");
+        return;
+      }
+      if (priceKey === "free") {
+        router.push("/auth/signup?plan=free");
+        return;
+      }
+      router.push("/auth/signup");
       return;
     }
     const isOneTime = priceKey === "lifetime" || priceKey.startsWith("credits-");
@@ -186,7 +198,7 @@ export default function PricingPage() {
               <FeatureLine ok={false}>Offline PWA</FeatureLine>
             </ul>
             <Link
-              href="/auth/signup?redirect=/pricing"
+              href="/auth/signup?plan=free"
               className="btn-ghost-gold w-full text-center py-3 rounded-lg font-medium"
               style={{ fontFamily: "var(--font-body), sans-serif" }}
             >

@@ -18,7 +18,6 @@ export default function AuthModal({
   supabaseClient,
 }: Props) {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const [isSignupMode, setIsSignupMode] = useState(false);
   const authRootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -26,20 +25,39 @@ export default function AuthModal({
     const root = authRootRef.current;
     if (!root) return;
 
-    const syncSignupMode = () => {
+    const applyAgeGateState = () => {
       const submit = root.querySelector(
         'button[type="submit"]'
       ) as HTMLButtonElement | null;
-      const inSignup =
-        !!submit && /sign\s*up/i.test((submit.textContent || "").trim());
-      setIsSignupMode(inSignup);
+      if (!submit) return;
+      submit.disabled = !ageConfirmed;
+      if (!ageConfirmed) {
+        submit.style.opacity = "0.55";
+        submit.style.cursor = "not-allowed";
+      } else {
+        submit.style.opacity = "";
+        submit.style.cursor = "";
+      }
+
+      const providerButtons = root.querySelectorAll(
+        'button[type="button"]'
+      ) as NodeListOf<HTMLButtonElement>;
+      providerButtons.forEach((btn) => {
+        const label = (btn.textContent || "").toLowerCase();
+        if (!label.includes("google")) return;
+        btn.disabled = !ageConfirmed;
+        if (!ageConfirmed) {
+          btn.style.opacity = "0.55";
+          btn.style.cursor = "not-allowed";
+        } else {
+          btn.style.opacity = "";
+          btn.style.cursor = "";
+        }
+      });
     };
 
-    syncSignupMode();
-
-    const observer = new MutationObserver(() => {
-      syncSignupMode();
-    });
+    applyAgeGateState();
+    const observer = new MutationObserver(applyAgeGateState);
 
     observer.observe(root, {
       childList: true,
@@ -48,32 +66,7 @@ export default function AuthModal({
     });
 
     return () => observer.disconnect();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const root = authRootRef.current;
-    if (!root) return;
-    const submit = root.querySelector(
-      'button[type="submit"]'
-    ) as HTMLButtonElement | null;
-    if (!submit) return;
-
-    if (isSignupMode && !ageConfirmed) {
-      submit.disabled = true;
-      submit.dataset.ageGated = "true";
-      submit.style.opacity = "0.55";
-      submit.style.cursor = "not-allowed";
-      return;
-    }
-
-    if (submit.dataset.ageGated === "true") {
-      submit.disabled = false;
-      delete submit.dataset.ageGated;
-      submit.style.opacity = "";
-      submit.style.cursor = "";
-    }
-  }, [ageConfirmed, isSignupMode, open]);
+  }, [ageConfirmed, open]);
 
   if (!open) return null;
   const redirectTo =
@@ -215,43 +208,41 @@ export default function AuthModal({
             onlyThirdPartyProviders={false}
             magicLink={false}
             showLinks={true}
-            view="sign_in"
+            view="sign_up"
           />
-          {isSignupMode ? (
-            <label
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "10px",
+              marginTop: 12,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={ageConfirmed}
+              onChange={(e) => setAgeConfirmed(e.target.checked)}
               style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "10px",
-                marginTop: 12,
-                cursor: "pointer",
+                marginTop: "3px",
+                width: 16,
+                height: 16,
+                accentColor: "#C8A96E",
+                border: "1px solid rgba(200, 169, 110, 0.35)",
+                backgroundColor: "#0D1117",
+              }}
+            />
+            <span
+              style={{
+                fontSize: 12,
+                color: "rgba(244,239,230,0.7)",
+                lineHeight: 1.6,
+                fontFamily: "var(--font-body), sans-serif",
               }}
             >
-              <input
-                type="checkbox"
-                checked={ageConfirmed}
-                onChange={(e) => setAgeConfirmed(e.target.checked)}
-                style={{
-                  marginTop: "3px",
-                  width: 16,
-                  height: 16,
-                  accentColor: "#C8A96E",
-                  border: "1px solid rgba(200, 169, 110, 0.35)",
-                  backgroundColor: "#0D1117",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: 12,
-                  color: "rgba(244,239,230,0.7)",
-                  lineHeight: 1.6,
-                  fontFamily: "var(--font-body), sans-serif",
-                }}
-              >
-                I confirm I am 18 years of age or older
-              </span>
-            </label>
-          ) : null}
+              I confirm I am 18 years of age or older
+            </span>
+          </label>
         </div>
       </div>
     </div>

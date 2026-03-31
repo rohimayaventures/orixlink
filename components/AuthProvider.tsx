@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -22,7 +23,7 @@ type AuthCtx = {
   user: User | null;
   loading: boolean;
   supabase: SupabaseClient | null;
-  openAuthModal: () => void;
+  openAuthModal: (reason?: "anonymous_cap") => void;
   closeAuthModal: () => void;
   authModalOpen: boolean;
   refreshUser: () => Promise<void>;
@@ -48,6 +49,7 @@ function SessionTimeoutShell({ children }: { children: React.ReactNode }) {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  const openAuthModal = useCallback(() => setAuthModalOpen(true), []);
+  const openAuthModal = useCallback(
+    (reason?: "anonymous_cap") => {
+      if (pathname?.startsWith("/auth")) return;
+      if (reason !== "anonymous_cap") return;
+      setAuthModalOpen(true);
+    },
+    [pathname]
+  );
   const closeAuthModal = useCallback(() => setAuthModalOpen(false), []);
 
   const value = useMemo(
