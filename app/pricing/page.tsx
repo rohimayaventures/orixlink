@@ -309,7 +309,7 @@ export default function PricingPage() {
               )}
             </div>
             <ul className="space-y-2.5 flex-1 mb-8">
-              <FeatureLine ok>300 assessments / month, 6 members</FeatureLine>
+              <FeatureLine ok>600 assessments / month, 6 members</FeatureLine>
               <FeatureLine ok>Everything in Pro</FeatureLine>
               <FeatureLine ok>6 member profiles</FeatureLine>
               <FeatureLine ok>10 assessments / day per member</FeatureLine>

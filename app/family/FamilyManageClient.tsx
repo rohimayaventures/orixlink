@@ -444,7 +444,7 @@ export default function FamilyManageClient({
                 fontFamily: "var(--font-body), sans-serif",
               }}
             >
-              The Family plan includes up to 6 members, 300 assessments per month,
+              The Family plan includes up to 6 members, 600 assessments per month,
               separate history per profile, and shared billing—ideal for parents,
               partners, and dependents.
             </p>

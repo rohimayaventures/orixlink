@@ -67,7 +67,7 @@ const PLANS: PlanDef[] = [
     monthlyPrice: "$34",
     annualNote: "Billed $340/yr · save $68",
     features: [
-      "300 assessments / month shared",
+      "600 assessments / month shared",
       "Up to 6 members",
       "Deep analysis (Sonnet)",
       "Dependent profiles (up to 6)",
@@ -123,13 +123,14 @@ function AuthSignUpInner() {
 
   const selectedPlanPriceText = useMemo(() => {
     if (!selectedPlanDef) return "";
-    const price =
-      selectedPlanDef.id === "free"
-        ? "$0/mo"
-        : billing === "annual"
-          ? `${selectedPlanDef.annualPrice}/mo`
-          : `${selectedPlanDef.monthlyPrice}/mo`;
-    return `You selected ${selectedPlanDef.name} · ${price}`;
+    if (selectedPlanDef.id === "free") {
+      return `You selected ${selectedPlanDef.name} · $0/mo`;
+    }
+    if (billing === "annual") {
+      const annualTotal = selectedPlanDef.id === "pro" ? "$190/yr" : "$340/yr";
+      return `You selected ${selectedPlanDef.name} · ${selectedPlanDef.annualPrice}/mo · Billed ${annualTotal}`;
+    }
+    return `You selected ${selectedPlanDef.name} · ${selectedPlanDef.monthlyPrice}/mo`;
   }, [selectedPlanDef, billing]);
 
   async function startCheckout(plan: Tier): Promise<void> {
