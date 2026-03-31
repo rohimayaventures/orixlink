@@ -179,6 +179,8 @@ export async function POST(request: NextRequest) {
   let rollbackUserId: string | null = null;
   let adminForRollback: AdminClient | null = null;
   let wasOverCapBeforeAttempt = false;
+  let wasAtSubscriptionCap = false;
+  let consumedFromCredits = false;
   let creditRowIdToRestore: string | null = null;
   let tier: string | null = null;
 
@@ -382,6 +384,9 @@ export async function POST(request: NextRequest) {
 
       wasOverCapBeforeAttempt =
         (currentUsage?.assessments_used ?? 0) >= userCap;
+      wasAtSubscriptionCap =
+        (currentUsage?.assessments_used ?? 0) >=
+        (currentUsage?.assessments_cap ?? 5);
 
       if (tier === "family") {
         const todayStart = new Date();
@@ -482,6 +487,7 @@ export async function POST(request: NextRequest) {
       }
 
       consumedAttempt = true;
+      consumedFromCredits = wasAtSubscriptionCap;
       rollbackUserId = user.id;
       adminForRollback = admin;
 
@@ -493,7 +499,13 @@ export async function POST(request: NextRequest) {
           .eq("user_id", user.id)
           .maybeSingle();
         if (!owned) {
-          await admin.rpc("rollback_assessment", { p_user_id: user.id });
+          if (consumedFromCredits) {
+            if (creditRowIdToRestore) {
+              await rollbackCreditForRow(admin, creditRowIdToRestore);
+            }
+          } else {
+            await admin.rpc("rollback_assessment", { p_user_id: user.id });
+          }
           return NextResponse.json(
             { error: "Invalid session_id" },
             { status: 400 }
@@ -503,7 +515,13 @@ export async function POST(request: NextRequest) {
 
       const userContentCheck = lastUserMessageContent(messages);
       if (!userContentCheck.trim()) {
-        await admin.rpc("rollback_assessment", { p_user_id: user.id });
+        if (consumedFromCredits) {
+          if (creditRowIdToRestore) {
+            await rollbackCreditForRow(admin, creditRowIdToRestore);
+          }
+        } else {
+          await admin.rpc("rollback_assessment", { p_user_id: user.id });
+        }
         return NextResponse.json(
           { error: "Last user message missing" },
           { status: 400 }
@@ -770,16 +788,19 @@ export async function POST(request: NextRequest) {
       responseText = content.text;
     } catch (claudeErr) {
       if (consumedAttempt && rollbackUserId && adminForRollback) {
-        const { error: rbErr } = await adminForRollback.rpc(
-          "rollback_assessment",
-          { p_user_id: rollbackUserId }
-        );
-        if (rbErr) console.error("rollback_assessment", rbErr);
-        if (wasOverCapBeforeAttempt && creditRowIdToRestore) {
-          await rollbackCreditForRow(
-            adminForRollback,
-            creditRowIdToRestore
+        if (consumedFromCredits) {
+          if (creditRowIdToRestore) {
+            await rollbackCreditForRow(
+              adminForRollback,
+              creditRowIdToRestore
+            );
+          }
+        } else {
+          const { error: rbErr } = await adminForRollback.rpc(
+            "rollback_assessment",
+            { p_user_id: rollbackUserId }
           );
+          if (rbErr) console.error("rollback_assessment", rbErr);
         }
       }
       throw claudeErr;
