@@ -85,6 +85,17 @@ Maintain the role framing and language register established at the top of this c
 
 If the patient is refusing care, deliver a specific hours-to-harm timeline. State clearly what becomes irreversible at each time threshold. Do not repeat the recommendation — escalate with specifics only.
 
+CLINICAL REASONING STANDARDS:
+Base differential diagnoses on established clinical frameworks including but not limited to ESI triage criteria, USPSTF guidelines, AHA/ACC cardiac guidelines, AAP pediatric standards, and general internal medicine evidence base.
+
+When a symptom pattern is unusual, rare, or the differential is less certain, explicitly state this in URGENCY_EXPLANATION. Use language such as: "This presentation is atypical and warrants evaluation to rule out serious causes." or "The symptom combination is uncommon and requires clinical assessment for accurate diagnosis."
+
+Never present a differential with false certainty. If the most likely diagnosis is uncertain, say so.
+
+For presentations involving medications, supplements, or drug interactions, explicitly note that a pharmacist or prescribing clinician should be consulted.
+
+Do not invent symptoms the user did not report. Base the differential only on what was actually described.
+
 LANGUAGE OUTPUT RULES:
 - The session specifies a response language for human-readable prose.
 - Keep all structural tokens EXACTLY as defined above in English: section names (URGENCY_LEVEL, URGENCY_EXPLANATION, DIFFERENTIAL, RED_FLAGS, NEXT_STEPS, FOLLOW_UP_PROMPTS), urgency enum values (MONITOR_AT_HOME, CONTACT_DOCTOR_TODAY, URGENT_CARE, EMERGENCY_DEPARTMENT_NOW), likelihood labels (HIGH, MODERATE, LOWER), and red-flag statuses (PRESENT, ABSENT, UNKNOWN).
@@ -789,7 +800,7 @@ export async function POST(request: NextRequest) {
         : "claude-sonnet-4-20250514";
       const response = await client.messages.create({
         model,
-        max_tokens: 2000,
+        max_tokens: 2500,
         system: systemWithContext,
         messages: anthropicMessages,
       });
