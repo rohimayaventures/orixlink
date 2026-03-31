@@ -263,7 +263,25 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        if (!subscriptionAllowsDependents(sub)) {
+        const { data: activeFamilyMemberRow, error: familyMemberErr } =
+          await admin
+            .from("family_members")
+            .select("id")
+            .eq("member_user_id", user.id)
+            .eq("status", "active")
+            .maybeSingle();
+        if (familyMemberErr) {
+          console.error("assess family member lookup", familyMemberErr);
+          return NextResponse.json(
+            { error: "Could not verify family membership" },
+            { status: 500 }
+          );
+        }
+
+        const hasDependentAccess =
+          subscriptionAllowsDependents(sub) || !!activeFamilyMemberRow?.id;
+
+        if (!hasDependentAccess) {
           return NextResponse.json(
             { error: "Pro or Family subscription required to link a dependent" },
             { status: 403 }
