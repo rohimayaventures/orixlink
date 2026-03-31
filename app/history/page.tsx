@@ -62,10 +62,20 @@ export default async function HistoryPage({
     .maybeSingle();
 
   const subStatusLower = (subRow?.status ?? "").toLowerCase();
-  const dependentsEligible =
+  const tierDependentEligible =
     subRow != null &&
     canManageDependentsTier(subRow.tier) &&
     (subStatusLower === "active" || subStatusLower === "trialing");
+
+  const { data: familyMembership } = await supabase
+    .from("family_members")
+    .select("id")
+    .eq("member_user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  const dependentsEligible =
+    tierDependentEligible || familyMembership != null;
 
   let dependentList: { id: string; display_name: string }[] = [];
   if (dependentsEligible) {
@@ -109,7 +119,7 @@ export default async function HistoryPage({
           className="font-mono text-[0.6875rem] tracking-[0.14em] uppercase mb-2"
           style={{ color: "var(--gold-muted)" }}
         >
-          Saved sessions
+          Assessment history
         </p>
         <h1
           className="font-display"
@@ -135,7 +145,7 @@ export default async function HistoryPage({
         ) : null}
         {!sessions?.length ? (
           <p style={{ color: MUTED }}>
-            No saved sessions yet.{" "}
+            No assessments yet.{" "}
             <Link href="/assessment" className="orix-link" style={{ textDecoration: "underline" }}>
               Run an assessment
             </Link>

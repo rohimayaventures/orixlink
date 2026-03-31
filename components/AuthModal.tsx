@@ -19,6 +19,8 @@ export default function AuthModal({
 }: Props) {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const authRootRef = useRef<HTMLDivElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +70,29 @@ export default function AuthModal({
     return () => observer.disconnect();
   }, [ageConfirmed, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    const root = modalRef.current;
+    if (!root) return;
+    const firstFocusable = root.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    firstFocusable?.focus();
+    return () => {
+      lastFocusedRef.current?.focus();
+    };
+  }, [open]);
+
   if (!open) return null;
   const redirectTo =
     typeof window !== "undefined"
@@ -90,6 +115,10 @@ export default function AuthModal({
     >
       <div
         className="auth-modal-panel"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-heading"
         style={{
           position: "relative",
           width: "100%",
@@ -122,6 +151,7 @@ export default function AuthModal({
         </button>
 
         <h2
+          id="auth-modal-heading"
           className="font-display"
           style={{
             fontSize: 22,

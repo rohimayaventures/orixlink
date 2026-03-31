@@ -822,6 +822,7 @@ export default function FamilyManageClient({
           </form>
           {inviteMsg && (
             <p
+              aria-live="polite"
               className="mt-3 text-sm"
               style={{
                 color: inviteMsg.ok ? "#86EFAC" : "#FCA5A5",

@@ -445,6 +445,8 @@ export default function ResultsPage() {
   const [userTier, setUserTier] = useState<ReminderUserTier>('free')
   const [showReminderSkeleton, setShowReminderSkeleton] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const shareModalRef = useRef<HTMLDivElement>(null)
+  const shareTriggerRef = useRef<HTMLButtonElement>(null)
 
   const isPaidUser =
     userTier === 'pro' || userTier === 'family' || userTier === 'lifetime'
@@ -558,6 +560,46 @@ export default function ResultsPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  useEffect(() => {
+    if (!showShare) return
+
+    const root = shareModalRef.current
+    const firstFocusable = root?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    firstFocusable?.focus()
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowShare(false)
+        return
+      }
+      if (e.key !== "Tab" || !root) return
+      const focusables = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.hasAttribute("disabled"))
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown)
+    return () => {
+      document.removeEventListener("keydown", onKeyDown)
+      shareTriggerRef.current?.focus()
+    }
+  }, [showShare])
 
   async function send(text: string) {
     if (!text.trim() || loading) return
@@ -854,7 +896,7 @@ export default function ResultsPage() {
 
         {/* Follow-up chips */}
         {followUps.length > 0 && !loading && (
-          <div style={{ paddingBottom: 12, flexShrink: 0 }}>
+          <div aria-live="polite" style={{ paddingBottom: 12, flexShrink: 0 }}>
             <p style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-mono)', color: MUTED, letterSpacing: '0.08em', marginBottom: 8 }}>
               TAP TO ADD TO ASSESSMENT
             </p>
@@ -995,6 +1037,7 @@ export default function ResultsPage() {
       {/* ── Floating share button ── */}
       {latestAssessment && (
         <button
+          ref={shareTriggerRef}
           type="button"
           onClick={() => setShowShare(true)}
           className="orix-btn-gold"
@@ -1025,7 +1068,12 @@ export default function ResultsPage() {
           />
 
           {/* Modal */}
-          <div style={{
+          <div
+            ref={shareModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-assessment-heading"
+            style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 51,
             background: CARD_BG,
             borderRadius: '20px 20px 0 0',
@@ -1033,12 +1081,17 @@ export default function ResultsPage() {
             boxShadow: '0 -8px 40px rgba(0,0,0,0.45)',
             border: '1px solid rgba(255,255,255,0.07)',
             borderBottom: 'none',
-          }}>
+          }}
+          >
             {/* Handle */}
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.12)', margin: '0 auto 24px' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <h2 className="font-display" style={{ fontSize: '1.5rem', fontWeight: 400, fontStyle: 'italic', color: TEXT }}>
+              <h2
+                id="share-assessment-heading"
+                className="font-display"
+                style={{ fontSize: '1.5rem', fontWeight: 400, fontStyle: 'italic', color: TEXT }}
+              >
                 Share Assessment
               </h2>
               <button

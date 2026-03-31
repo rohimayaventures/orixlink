@@ -11,6 +11,9 @@ export function ModelBadge({ tier }: ModelBadgeProps) {
   const isDeep = DEEP_TIERS.includes(
     normalized as (typeof DEEP_TIERS)[number]
   );
+  const badgeTitle = isDeep
+    ? "More thorough analysis for complex or high-stakes symptoms"
+    : "Fast and accurate analysis for everyday triage";
 
   return (
     <div
@@ -38,6 +41,7 @@ export function ModelBadge({ tier }: ModelBadgeProps) {
         }}
       />
       <span
+        title={badgeTitle}
         style={{
           fontFamily: "var(--font-mono), monospace",
           fontSize: "11px",

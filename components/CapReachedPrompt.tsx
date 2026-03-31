@@ -60,6 +60,7 @@ export default function CapReachedPrompt({
 
   return (
     <div
+      role="alert"
       style={{
         padding: "24px",
         marginBottom: 16,

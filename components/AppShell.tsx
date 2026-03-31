@@ -104,7 +104,7 @@ export default function AppShell({
               ...(Boolean(user) && !usage.loading && usage.tier === "family"
                 ? ([["Family", "/family"]] as [string, string][])
                 : []),
-              ["Dash", "/dashboard"],
+              ["Dashboard", "/dashboard"],
               ["History", "/history"],
             ] as [string, string][]
           ).map(([label, href]) => (

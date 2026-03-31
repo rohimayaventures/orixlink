@@ -592,7 +592,6 @@ Response language code: ${language} (${LANGUAGE_PROMPT_NAMES[language] ?? langua
 
   return (
     <main style={{ minHeight: '100vh', background: BG_PAGE, display: 'flex', flexDirection: 'column' }}>
-
       {/* ── Nav ── */}
       <nav
         className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-4 py-3 sm:px-6 sm:py-4"

@@ -284,7 +284,7 @@ export default function SessionDetailClient({
               marginBottom: 12,
             }}
           >
-            Suggested follow-ups from this session
+            Suggested follow-ups from this assessment
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {parsed.followUpPrompts.map((prompt, i) => (
