@@ -209,17 +209,18 @@ function AuthSignUpInner() {
     setSubmitting(true);
     setFormError("");
     try {
-      const callbackNext = `/auth/signup?plan=${selectedPlan}`;
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}`
-          : undefined;
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
       });
       if (error) {
+        console.error("Google OAuth error:", error);
         setFormError(error.message || "Could not start Google sign up.");
       }
     } finally {
@@ -343,6 +344,7 @@ function AuthSignUpInner() {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: 16,
+            alignItems: "stretch",
             opacity: modalOpen ? 0.4 : 1,
             transition: "opacity 200ms ease",
           }}
@@ -369,6 +371,9 @@ function AuthSignUpInner() {
                   border: plan.recommended ? "1px solid rgba(200,169,110,0.45)" : BORDER,
                   borderRadius: 16,
                   padding: 22,
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
                   boxShadow: plan.recommended
                     ? "0 0 0 1px rgba(200,169,110,0.2)"
                     : "none",
@@ -408,7 +413,7 @@ function AuthSignUpInner() {
                   ) : null}
                 </div>
 
-                <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, lineHeight: 1.7, marginBottom: 20 }}>
+                <ul style={{ margin: 0, paddingLeft: 18, color: TEXT, lineHeight: 1.7, marginBottom: 20, flex: 1 }}>
                   {plan.features.map((f) => (
                     <li key={f} style={{ marginBottom: 2 }}>
                       {f}
@@ -430,6 +435,7 @@ function AuthSignUpInner() {
                     cursor: "pointer",
                     transition: "opacity 200ms ease",
                     fontFamily: "var(--font-body), sans-serif",
+                    marginTop: "auto",
                   }}
                 >
                   {plan.cta}
@@ -523,11 +529,21 @@ function AuthSignUpInner() {
                 background: GOLD,
                 color: BG,
                 fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
                 cursor: !ageConfirmed || submitting ? "not-allowed" : "pointer",
                 opacity: !ageConfirmed || submitting ? 0.55 : 1,
                 fontFamily: "var(--font-body), sans-serif",
               }}
             >
+              <img
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google"
+                width={20}
+                height={20}
+              />
               Continue with Google
             </button>
 
