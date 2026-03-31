@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
 import HeaderAuth from '@/components/HeaderAuth'
 import {
   ModelBadge,
@@ -171,6 +172,7 @@ export default function AssessmentPage() {
     { userId: string; label: string }[]
   >([])
   const [isFamilyPlanOwner, setIsFamilyPlanOwner] = useState(false)
+  const [isActiveFamilyMember, setIsActiveFamilyMember] = useState(false)
 
   const userTier = tierForRoleFilter(subscriptionTier, user)
   const visibleRoles = useMemo(() => {
@@ -189,7 +191,8 @@ export default function AssessmentPage() {
         selectedRoleDef?.showDependentPicker &&
         (userTier === 'pro' ||
           userTier === 'family' ||
-          userTier === 'lifetime')
+          userTier === 'lifetime' ||
+          isActiveFamilyMember)
     )
   const showFamilySubselector =
     Boolean(
@@ -231,6 +234,40 @@ export default function AssessmentPage() {
     }
     setDraftHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setIsActiveFamilyMember(false)
+      return
+    }
+
+    let cancelled = false
+    const supabase = createClient()
+
+    void (async () => {
+      try {
+        const { data: familyMembership, error: familyErr } = await supabase
+          .from('family_members')
+          .select('id')
+          .eq('member_user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle()
+        if (cancelled) return
+        if (familyErr) {
+          console.error('assessment active family member lookup', familyErr)
+          setIsActiveFamilyMember(false)
+          return
+        }
+        setIsActiveFamilyMember(!!familyMembership)
+      } catch {
+        if (!cancelled) setIsActiveFamilyMember(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   useEffect(() => {
     if (!user) {

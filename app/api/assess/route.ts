@@ -795,11 +795,31 @@ export async function POST(request: NextRequest) {
       });
 
       anthropicUsage = response.usage;
-      const content = response.content[0];
-      if (content.type !== "text") {
-        throw new Error("Unexpected response type from Claude");
+      const textBlock = response.content.find((block) => block.type === "text");
+      if (!textBlock || textBlock.type !== "text") {
+        if (consumedAttempt && rollbackUserId && adminForRollback) {
+          if (consumedFromCredits) {
+            if (creditRowIdToRestore) {
+              await rollbackCreditForRow(adminForRollback, creditRowIdToRestore);
+            }
+          } else {
+            const { error: rbErr } = await adminForRollback.rpc(
+              "rollback_assessment",
+              { p_user_id: rollbackUserId }
+            );
+            if (rbErr) console.error("rollback_assessment", rbErr);
+          }
+        }
+        return NextResponse.json(
+          {
+            error: "Assessment failed. Please try again.",
+            code: "model_response_invalid",
+          },
+          { status: 500 }
+        );
       }
-      responseText = content.text;
+      const assistantText = textBlock.text;
+      responseText = assistantText;
     } catch (claudeErr) {
       if (consumedAttempt && rollbackUserId && adminForRollback) {
         if (consumedFromCredits) {
