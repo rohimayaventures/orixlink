@@ -189,13 +189,12 @@ export default function PricingPage() {
             <ul className="space-y-2.5 flex-1 mb-8">
               <FeatureLine ok>5 assessments / month</FeatureLine>
               <FeatureLine ok>Standard analysis</FeatureLine>
-              <FeatureLine ok>Voice input</FeatureLine>
-              <FeatureLine ok>Caregiver mode</FeatureLine>
-              <FeatureLine ok>All 12 languages</FeatureLine>
+              <FeatureLine ok>Core triage and differential</FeatureLine>
+              <FeatureLine ok>Anonymous or signed-in</FeatureLine>
+              <FeatureLine ok>Legal disclaimer included</FeatureLine>
               <FeatureLine ok={false}>Symptom history</FeatureLine>
               <FeatureLine ok={false}>PDF export</FeatureLine>
               <FeatureLine ok={false}>Follow-up reminders</FeatureLine>
-              <FeatureLine ok={false}>Offline PWA</FeatureLine>
             </ul>
             <Link
               href="/auth/signup?plan=free"
@@ -253,10 +252,9 @@ export default function PricingPage() {
               <FeatureLine ok>150 assessments / month</FeatureLine>
               <FeatureLine ok>Deep analysis</FeatureLine>
               <FeatureLine ok>Full symptom history timeline</FeatureLine>
-              <FeatureLine ok>Appointment prep PDF export</FeatureLine>
+              <FeatureLine ok>Print and share assessment summary</FeatureLine>
               <FeatureLine ok>Follow-up reminders</FeatureLine>
-              <FeatureLine ok>Offline PWA</FeatureLine>
-              <FeatureLine ok>Dependent profiles (up to 2)</FeatureLine>
+              <FeatureLine ok>Assess on behalf of up to 2 dependents</FeatureLine>
               <FeatureLine ok>Credit packs available</FeatureLine>
               <FeatureLine ok>Cross-device sync</FeatureLine>
             </ul>
@@ -313,11 +311,10 @@ export default function PricingPage() {
               <FeatureLine ok>Everything in Pro</FeatureLine>
               <FeatureLine ok>6 member profiles</FeatureLine>
               <FeatureLine ok>10 assessments / day per member</FeatureLine>
+              <FeatureLine ok>Each member can add up to 2 dependents</FeatureLine>
               <FeatureLine ok>Separate history per profile</FeatureLine>
               <FeatureLine ok>Family usage dashboard</FeatureLine>
               <FeatureLine ok>Per-member reminders</FeatureLine>
-              <FeatureLine ok={false}>Provider dashboard</FeatureLine>
-              <FeatureLine ok={false}>Clinical seats</FeatureLine>
             </ul>
             <button
               type="button"
