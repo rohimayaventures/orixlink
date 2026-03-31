@@ -163,6 +163,14 @@ function parseAllowedFlag(value: unknown): boolean | null {
 function parseAttemptAssessmentResult(data: unknown): AttemptResult | null {
   if (data == null) return null;
   const row = Array.isArray(data) ? data[0] : data;
+  const allowedScalar = parseAllowedFlag(row);
+  if (allowedScalar !== null) {
+    return {
+      allowed: allowedScalar,
+      assessments_used: 0,
+      assessments_cap: 0,
+    };
+  }
   if (row == null || typeof row !== "object") return null;
   const o = row as Record<string, unknown>;
   const allowed = parseAllowedFlag(o.allowed);
@@ -473,12 +481,18 @@ export async function POST(request: NextRequest) {
             (sum, row) => sum + row.credits_remaining,
             0
           ) ?? 0;
+        const assessmentsCap =
+          ar.assessments_cap > 0 ? ar.assessments_cap : userCap;
+        const assessmentsUsed =
+          ar.assessments_used > 0
+            ? ar.assessments_used
+            : (currentUsage?.assessments_used ?? assessmentsCap);
 
         return NextResponse.json(
           {
             error: "cap_reached",
-            assessments_used: ar.assessments_used,
-            assessments_cap: ar.assessments_cap,
+            assessments_used: assessmentsUsed,
+            assessments_cap: assessmentsCap,
             reset_date: nextPeriodStartDate(yearMonth),
             credits_remaining: creditsRemaining,
           },

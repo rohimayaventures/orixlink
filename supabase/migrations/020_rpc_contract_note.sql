@@ -1,0 +1,5 @@
+-- NOTE: The production `public.attempt_assessment` RPC contract returns boolean.
+-- App handling in `app/api/assess/route.ts` treats:
+--   true  => assessment allowed, proceed
+--   false => cap reached, return 402 payload
+-- This migration is documentation-only and intentionally has no schema changes.
