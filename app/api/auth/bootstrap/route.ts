@@ -11,33 +11,35 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await supabase.from("subscriptions").upsert(
-      {
+    const { data: existingSub } = await supabase
+      .from("subscriptions")
+      .select("id, tier")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!existingSub) {
+      const now = new Date().toISOString();
+      await supabase.from("subscriptions").insert({
         user_id: user.id,
         tier: "free",
         status: "active",
-        is_lifetime: false,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
+        created_at: now,
+        updated_at: now,
+      });
+    }
 
     const yearMonth = new Date().toISOString().slice(0, 7);
-    const { data: existing } = await supabase
+    await supabase
       .from("usage_tracking")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("period_month", yearMonth)
-      .maybeSingle();
-
-    if (!existing) {
-      await supabase.from("usage_tracking").insert({
+      .upsert(
+      {
         user_id: user.id,
         period_month: yearMonth,
         assessments_used: 0,
         assessments_cap: 5,
-      });
-    }
+      },
+      { onConflict: "user_id,period_month", ignoreDuplicates: true }
+      );
 
     return NextResponse.json({ success: true });
   } catch (e) {
