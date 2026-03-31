@@ -84,6 +84,14 @@ function priceKeyFor(tier: Tier, billing: Billing): string | null {
   return billing === "annual" ? "family-annual" : "family-monthly";
 }
 
+function getRedirectUrl(plan: string) {
+  const base = `${window.location.origin}/auth/callback`;
+  if (plan && plan !== "free") {
+    return `${base}?plan=${plan}`;
+  }
+  return base;
+}
+
 function AuthSignUpInner() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -213,7 +221,7 @@ function AuthSignUpInner() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: getRedirectUrl(selectedPlan),
           queryParams: {
             access_type: "offline",
             prompt: "consent",
@@ -235,16 +243,12 @@ function AuthSignUpInner() {
     setSubmitting(true);
     setFormError("");
     try {
-      const callbackNext = `/auth/signup?plan=${selectedPlan}`;
-      const emailRedirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(callbackNext)}`
-          : undefined;
-
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { emailRedirectTo },
+        options: {
+          emailRedirectTo: getRedirectUrl(selectedPlan),
+        },
       });
 
       if (error) {
