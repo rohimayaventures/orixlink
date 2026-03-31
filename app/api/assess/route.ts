@@ -17,6 +17,7 @@ const client = new Anthropic({
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FAMILY_DAILY_LIMIT = 10;
 
 const VALID_ROLES = new Set([
   "patient",
@@ -363,6 +364,41 @@ export async function POST(request: NextRequest) {
 
       wasOverCapBeforeAttempt =
         (currentUsage?.assessments_used ?? 0) >= userCap;
+
+      if (tier === "family") {
+        const todayStart = new Date();
+        todayStart.setUTCHours(0, 0, 0, 0);
+        const tomorrowStart = new Date(todayStart);
+        tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+        const { count: dailyUsed, error: dailyErr } = await admin
+          .from("sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .gte("created_at", todayStart.toISOString())
+          .lt("created_at", tomorrowStart.toISOString());
+
+        if (dailyErr) {
+          console.error("family daily limit check", dailyErr);
+          return NextResponse.json(
+            { error: "Could not verify daily allowance" },
+            { status: 500 }
+          );
+        }
+
+        if ((dailyUsed ?? 0) >= FAMILY_DAILY_LIMIT) {
+          return NextResponse.json(
+            {
+              error: "daily_limit_reached",
+              message:
+                "Family members are limited to 10 assessments per day.",
+              daily_used: dailyUsed ?? 0,
+              daily_limit: FAMILY_DAILY_LIMIT,
+            },
+            { status: 429 }
+          );
+        }
+      }
 
       if (wasOverCapBeforeAttempt) {
         const nowIso = new Date().toISOString();

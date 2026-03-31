@@ -30,6 +30,7 @@ export async function GET() {
         email: m.email,
         isOwner: m.isOwner,
         assessmentsUsed: m.assessmentsUsed,
+        dailyUsed: m.dailyUsed,
         displayName: m.displayName,
       })),
     });

@@ -440,6 +440,7 @@ export default function ResultsPage() {
   const [assessmentFamilyMemberTargetId, setAssessmentFamilyMemberTargetId] =
     useState<string | null>(null)
   const [capPayload, setCapPayload] = useState<CapReachedPayload | null>(null)
+  const [dailyLimitMessage, setDailyLimitMessage] = useState<string | null>(null)
   const [showHistoryWarning, setShowHistoryWarning] = useState(false)
   const [userTier, setUserTier] = useState<ReminderUserTier>('free')
   const [showReminderSkeleton, setShowReminderSkeleton] = useState(true)
@@ -562,6 +563,7 @@ export default function ResultsPage() {
     if (!text.trim() || loading) return
     const userText = text.trim()
     setCapPayload(null)
+    setDailyLimitMessage(null)
     setLoading(true)
     setInput('')
     const prior = messages
@@ -595,6 +597,14 @@ export default function ResultsPage() {
       const data = await res.json()
       if (res.status === 402 && data?.error === 'cap_reached') {
         setCapPayload(data as CapReachedPayload)
+        setMessages(prior)
+        setInput(userText)
+        return
+      }
+      if (res.status === 429 && data?.error === 'daily_limit_reached') {
+        setDailyLimitMessage(
+          "You've reached the daily limit of 10 assessments for today. Your monthly pool resets daily at midnight."
+        )
         setMessages(prior)
         setInput(userText)
         return
@@ -804,6 +814,30 @@ export default function ResultsPage() {
             />
           </div>
         )}
+        {dailyLimitMessage ? (
+          <div
+            role="status"
+            style={{
+              marginBottom: 12,
+              background: 'rgba(239,68,68,0.12)',
+              border: '1px solid rgba(239,68,68,0.35)',
+              borderRadius: 10,
+              padding: '12px 14px',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: '#FCA5A5',
+                fontSize: 13,
+                lineHeight: 1.6,
+                fontFamily: 'var(--font-body), sans-serif',
+              }}
+            >
+              {dailyLimitMessage}
+            </p>
+          </div>
+        ) : null}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
           {messages.map((msg, i) => (
             <ChatBubble key={i} msg={msg} languageCode={languageCode} />

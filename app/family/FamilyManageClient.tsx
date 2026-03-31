@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { FAMILY_MAX_MEMBERS } from "@/lib/family";
-import type { FamilyUsagePayload } from "@/lib/familyUsage";
+import {
+  FAMILY_DAILY_LIMIT,
+  type FamilyUsagePayload,
+} from "@/lib/familyUsage";
 
 export type FamilyMemberRow = {
   id: string;
@@ -639,6 +642,15 @@ export default function FamilyManageClient({
                               }}
                             >
                               {m.assessmentsUsed} assessments
+                            </p>
+                            <p
+                              className="mt-1 text-xs"
+                              style={{
+                                fontFamily: "DM Sans, sans-serif",
+                                color: "rgba(200,169,110,0.85)",
+                              }}
+                            >
+                              {m.dailyUsed} of {FAMILY_DAILY_LIMIT} used today
                             </p>
                           </div>
                         </div>

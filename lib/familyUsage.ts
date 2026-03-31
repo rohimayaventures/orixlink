@@ -3,12 +3,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 type AdminClient = ReturnType<typeof createAdminClient>;
 
 export const FAMILY_POOL_CAP = 600;
+export const FAMILY_DAILY_LIMIT = 10;
 
 export type FamilyUsageMemberRow = {
   userId: string;
   email: string;
   isOwner: boolean;
   assessmentsUsed: number;
+  dailyUsed: number;
   /** For avatar initials; optional for API consumers that only need spec fields */
   displayName: string | null;
 };
@@ -121,6 +123,25 @@ export async function getFamilyUsageDashboard(
     usageByUser.set(uid, Number(row.assessments_used) || 0);
   }
 
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+  const { data: todaySessions } = await admin
+    .from("sessions")
+    .select("user_id")
+    .in("user_id", userIds)
+    .gte("created_at", todayStart.toISOString())
+    .lt("created_at", tomorrowStart.toISOString());
+
+  const dailyByUser = new Map<string, number>();
+  for (const row of todaySessions ?? []) {
+    const uid = (row.user_id as string) || "";
+    if (!uid) continue;
+    dailyByUser.set(uid, (dailyByUser.get(uid) ?? 0) + 1);
+  }
+
   const { data: profiles } = await admin
     .from("profiles")
     .select("id, full_name")
@@ -167,6 +188,7 @@ export async function getFamilyUsageDashboard(
       email: email || "—",
       isOwner,
       assessmentsUsed: usageByUser.get(userId) ?? 0,
+      dailyUsed: dailyByUser.get(userId) ?? 0,
       displayName,
     });
   }
