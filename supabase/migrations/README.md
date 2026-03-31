@@ -85,6 +85,13 @@ SQL editor. It creates a trigger on `auth.users`
 which requires running as `postgres` role, not
 via Supabase migrations API.
 
+Migration 019 must be run manually in
+Supabase SQL editor. It replaces the
+`attempt_assessment` function with a
+family-pool-aware version. Run with
+`postgres` role. Safe to re-run
+(`CREATE OR REPLACE`).
+
 ## Production database
 
 The production database at Supabase project
