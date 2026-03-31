@@ -29,6 +29,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://triage.rohimaya.ai"),
   title: "OrixLink AI — Where every symptom finds its answer",
   description:
     "OrixLink AI provides AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required. Start free at triage.rohimaya.ai.",
@@ -54,12 +55,21 @@ export const metadata: Metadata = {
       "OrixLink AI provides AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required. Start free at triage.rohimaya.ai.",
     type: "website",
     siteName: "OrixLink AI",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "OrixLink AI — Where every symptom finds its answer.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "OrixLink AI",
     description:
       "OrixLink AI provides AI-powered symptom triage and health guidance. Any symptom, any person, no prior diagnosis required. Start free at triage.rohimaya.ai.",
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,
