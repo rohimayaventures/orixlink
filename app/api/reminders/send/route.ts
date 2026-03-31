@@ -24,6 +24,7 @@ function escapeHtml(s: string): string {
 function getLogoFilename(): string {
   const publicDir = path.join(process.cwd(), "public");
   const candidates = [
+    "OrixLink AI Logo (1).svg",
     "logo.png",
     "logo.svg",
     "logo.jpg",

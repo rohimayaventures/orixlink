@@ -67,7 +67,7 @@ export default function AppShell({
       >
         <Link href="/" className="flex items-center gap-2.5 no-underline shrink-0">
           <img
-            src="/icon.svg"
+            src="/OrixLink AI Logo (1).svg"
             alt=""
             width={32}
             height={32}

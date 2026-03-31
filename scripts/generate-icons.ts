@@ -13,6 +13,7 @@ const sizes = [
 ];
 
 const candidates = [
+  "OrixLink AI Logo (1).svg",
   "logo.svg",
   "logo.png",
   "orixlink-logo.svg",
