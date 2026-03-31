@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { normalizeInviteEmail } from "@/lib/family";
+import { FAMILY_MAX_MEMBERS, normalizeInviteEmail } from "@/lib/family";
 
 export const runtime = "nodejs";
 
@@ -30,18 +30,62 @@ export async function POST(request: NextRequest) {
       .eq("status", "pending");
 
     const memberEmail = normalizeInviteEmail(user.email);
-    const row = rows?.find(
+    const emailInviteRow = rows?.find(
       (r) =>
         r.invited_email &&
         normalizeInviteEmail(r.invited_email) === memberEmail
     );
+    const codeOnlyRow = rows?.[0];
+    const row = emailInviteRow ?? codeOnlyRow;
 
     if (!row) {
       return NextResponse.json(
         {
-          error:
-            "Invalid code or this invite was not sent to your email address.",
+          error: "Invalid code or invite is no longer pending.",
         },
+        { status: 400 }
+      );
+    }
+
+    const { data: ownerSub } = await admin
+      .from("subscriptions")
+      .select("tier, status")
+      .eq("user_id", row.owner_user_id)
+      .maybeSingle();
+    const ownerStatus = (ownerSub?.status ?? "").toLowerCase();
+    const ownerHasActiveFamily =
+      ownerSub?.tier === "family" &&
+      (ownerStatus === "active" || ownerStatus === "trialing");
+    if (!ownerHasActiveFamily) {
+      return NextResponse.json(
+        { error: "Family subscription is not active for this invite code" },
+        { status: 403 }
+      );
+    }
+
+    const { data: alreadyMember } = await admin
+      .from("family_members")
+      .select("id")
+      .eq("member_user_id", user.id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    if (alreadyMember?.id) {
+      return NextResponse.json(
+        { error: "You are already an active member of a family plan" },
+        { status: 400 }
+      );
+    }
+
+    const { data: ownerRows } = await admin
+      .from("family_members")
+      .select("id, status")
+      .eq("owner_user_id", row.owner_user_id)
+      .in("status", ["pending", "active"]);
+    const seatCount = ownerRows?.length ?? 0;
+    if (seatCount >= FAMILY_MAX_MEMBERS) {
+      return NextResponse.json(
+        { error: `Maximum of ${FAMILY_MAX_MEMBERS} members reached` },
         { status: 400 }
       );
     }
@@ -53,6 +97,7 @@ export async function POST(request: NextRequest) {
         member_user_id: user.id,
         status: "active",
         joined_at: now,
+        invited_email: memberEmail,
       })
       .eq("id", row.id)
       .eq("status", "pending");
