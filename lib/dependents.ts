@@ -21,7 +21,7 @@ export type DependentAgeRange = (typeof DEPENDENT_AGE_RANGES)[number];
 
 export function dependentCapForTier(tier: string | null | undefined): number {
   const t = (tier ?? "").toLowerCase();
-  if (t === "family") return 6;
+  if (t === "family") return 2;
   if (t === "pro" || t === "lifetime" || t === "clinical") return 2;
   return 0;
 }

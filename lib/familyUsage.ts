@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-export const FAMILY_POOL_CAP = 300;
+export const FAMILY_POOL_CAP = 600;
 
 export type FamilyUsageMemberRow = {
   userId: string;

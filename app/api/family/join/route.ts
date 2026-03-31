@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         tier: "family",
         status: "active",
         is_lifetime: existingSub?.is_lifetime ?? false,
-        assessments_cap: 300,
+        assessments_cap: 600,
         stripe_customer_id: existingSub?.stripe_customer_id ?? null,
         stripe_subscription_id: existingSub?.stripe_subscription_id ?? null,
         current_period_start: existingSub?.current_period_start ?? null,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (utRow?.id) {
       await admin
         .from("usage_tracking")
-        .update({ assessments_cap: 300 })
+        .update({ assessments_cap: 600 })
         .eq("id", utRow.id);
     }
 

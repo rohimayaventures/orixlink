@@ -3,7 +3,7 @@ export type PaidTier = "free" | "pro" | "family" | "clinical" | "lifetime";
 const CAPS: Record<PaidTier, number> = {
   free: 5,
   pro: 150,
-  family: 300,
+  family: 600,
   clinical: 200,
   lifetime: 100,
 };

@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 
 function getTierFromPriceKey(priceKey: string): { tier: string; cap: number } {
   if (priceKey.startsWith('pro')) return { tier: 'pro', cap: 150 }
-  if (priceKey.startsWith('family')) return { tier: 'family', cap: 300 }
+  if (priceKey.startsWith('family')) return { tier: 'family', cap: 600 }
   if (priceKey === 'lifetime') return { tier: 'lifetime', cap: 100 }
   return { tier: 'free', cap: 5 }
 }
