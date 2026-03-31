@@ -254,8 +254,8 @@ h4, h5, h6 {
 }
 
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--cream); }
-::-webkit-scrollbar-thumb { background: var(--cream-border); border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--obsidian); }
+::-webkit-scrollbar-thumb { background: var(--obsidian-muted); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gold-muted); }
 
 ::selection { background: rgba(200,169,110,0.2); color: var(--text-on-light); }

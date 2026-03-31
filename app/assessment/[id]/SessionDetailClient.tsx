@@ -113,7 +113,7 @@ export default function SessionDetailClient({
           textDecoration: "none",
         }}
       >
-        ← Back to history
+        ← Back to assessments
       </Link>
 
       <div

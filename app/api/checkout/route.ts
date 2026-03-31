@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import { PRICE_IDS } from '@/lib/stripe-price-ids'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const PRICE_KEY_MAP: Record<string, string> = {
   'pro-monthly': PRICE_IDS.pro.monthly,
@@ -61,9 +62,44 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
     }
 
+    const supabaseAdmin = createAdminClient()
+    await supabaseAdmin.from('subscriptions').upsert(
+      {
+        user_id: user.id,
+        stripe_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+
     const isSubscription = type === 'subscription'
     const isCreditPack = priceKey.startsWith('credits-')
     const isLifetime = priceKey === 'lifetime'
+
+    if (isCreditPack) {
+      const { data: subRow } = await supabase
+        .from('subscriptions')
+        .select('tier')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const eligibleForCredits =
+        subRow?.tier === 'pro' ||
+        subRow?.tier === 'family' ||
+        subRow?.tier === 'lifetime' ||
+        subRow?.tier === 'clinical'
+
+      if (!eligibleForCredits) {
+        return NextResponse.json(
+          {
+            error: 'credits_tier_required',
+            message:
+              'Credit packs are available to Pro and Family subscribers only.',
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,

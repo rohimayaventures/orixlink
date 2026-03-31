@@ -102,8 +102,14 @@ export function BuyMorePrompt({
             color: "rgba(244,239,230,0.3)",
             fontSize: "18px",
             cursor: "pointer",
-            padding: "0",
             lineHeight: "1",
+            boxSizing: "border-box",
+            minWidth: 44,
+            minHeight: 44,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "13px",
           }}
         >
           &times;

@@ -820,18 +820,33 @@ export default function FamilyManageClient({
               {inviteLoading ? "Sending…" : "Send invite"}
             </button>
           </form>
-          {inviteMsg && (
-            <p
-              aria-live="polite"
-              className="mt-3 text-sm"
-              style={{
-                color: inviteMsg.ok ? "#86EFAC" : "#FCA5A5",
-                fontFamily: "var(--font-body), sans-serif",
-              }}
-            >
-              {inviteMsg.text}
-            </p>
-          )}
+          {inviteMsg ? (
+            inviteMsg.ok ? (
+              <p
+                aria-live="polite"
+                aria-atomic="true"
+                className="mt-3 text-sm"
+                style={{
+                  color: "#86EFAC",
+                  fontFamily: "var(--font-body), sans-serif",
+                }}
+              >
+                {inviteMsg.text}
+              </p>
+            ) : (
+              <p
+                role="alert"
+                aria-live="assertive"
+                className="mt-3 text-sm"
+                style={{
+                  color: "#FCA5A5",
+                  fontFamily: "var(--font-body), sans-serif",
+                }}
+              >
+                {inviteMsg.text}
+              </p>
+            )
+          ) : null}
         </section>
 
         <section>

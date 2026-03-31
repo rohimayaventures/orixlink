@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { PRICE_IDS } from "@/lib/stripe-price-ids";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -44,6 +45,16 @@ export async function GET(request: NextRequest) {
       });
       customerId = customer.id;
     }
+
+    const supabaseAdmin = createAdminClient();
+    await supabaseAdmin.from("subscriptions").upsert(
+      {
+        user_id: user.id,
+        stripe_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,

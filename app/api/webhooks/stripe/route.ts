@@ -90,6 +90,37 @@ async function addCredits(
   }
 }
 
+async function resolveWebhookUserId(args: {
+  metadataUserId?: string
+  customerId?: string | null
+  eventId: string
+  eventType: string
+}): Promise<string | null> {
+  let userId = args.metadataUserId ?? null
+
+  if (!userId && args.customerId) {
+    const { data: subRow } = await supabaseAdmin
+      .from('subscriptions')
+      .select('user_id')
+      .eq('stripe_customer_id', args.customerId)
+      .maybeSingle()
+
+    if (subRow?.user_id) {
+      userId = subRow.user_id
+    }
+  }
+
+  if (!userId) {
+    console.error('Webhook: no user_id resolved', {
+      eventId: args.eventId,
+      eventType: args.eventType,
+      customerId: args.customerId ?? null,
+    })
+  }
+
+  return userId
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
@@ -126,20 +157,18 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        const userId = session.metadata?.user_id
+        const customerId =
+          typeof session.customer === 'string' ? session.customer : null
+        const userId = await resolveWebhookUserId({
+          metadataUserId: session.metadata?.user_id,
+          customerId,
+          eventId: event.id,
+          eventType: event.type,
+        })
         const creditsAmount = session.metadata?.credits_amount
         const isLifetime = session.metadata?.is_lifetime === 'true'
 
         if (!userId) {
-          console.error(
-            'Missing user_id in webhook metadata',
-            'event type:',
-            event.type,
-            'event id:',
-            event.id,
-            'customer:',
-            session.customer ?? 'unknown'
-          )
           break
         }
 
@@ -195,19 +224,17 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription
-        const userId = sub.metadata?.user_id
+        const customerId =
+          typeof sub.customer === 'string' ? sub.customer : null
+        const userId = await resolveWebhookUserId({
+          metadataUserId: sub.metadata?.user_id,
+          customerId,
+          eventId: event.id,
+          eventType: event.type,
+        })
         const priceKey = sub.metadata?.price_key
 
         if (!userId) {
-          console.error(
-            'Missing user_id in webhook metadata',
-            'event type:',
-            event.type,
-            'event id:',
-            event.id,
-            'customer:',
-            sub.customer ?? 'unknown'
-          )
           break
         }
         if (!priceKey) {
@@ -258,17 +285,15 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription
-        const userId = sub.metadata?.user_id
+        const customerId =
+          typeof sub.customer === 'string' ? sub.customer : null
+        const userId = await resolveWebhookUserId({
+          metadataUserId: sub.metadata?.user_id,
+          customerId,
+          eventId: event.id,
+          eventType: event.type,
+        })
         if (!userId) {
-          console.error(
-            'Missing user_id in webhook metadata',
-            'event type:',
-            event.type,
-            'event id:',
-            event.id,
-            'customer:',
-            sub.customer ?? 'unknown'
-          )
           break
         }
 

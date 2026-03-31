@@ -72,6 +72,15 @@ export default function AccountClient({
   const [depFormError, setDepFormError] = useState<string | null>(null);
 
   const subStatusNorm = (subscription?.status ?? "").toLowerCase();
+  const statusLabel = (() => {
+    const raw = (subscription?.status ?? "").toLowerCase();
+    if (!raw) return "Active";
+    if (raw === "active") return "Active";
+    if (raw === "canceled" || raw === "cancelled") return "Canceled";
+    if (raw === "trialing") return "Trial";
+    if (raw === "past_due") return "Past due";
+    return "Active";
+  })();
   const showDependentsSection =
     (tier === "pro" || tier === "family") &&
     (subStatusNorm === "active" || subStatusNorm === "trialing");
@@ -473,7 +482,7 @@ export default function AccountClient({
             {subscription?.is_lifetime ? " · Lifetime" : ""}
           </p>
           <p style={{ fontSize: "0.875rem", color: "var(--text-muted-dark)" }}>
-            Status: {subscription?.status ?? "—"}
+            Status: {statusLabel}
           </p>
         </div>
 

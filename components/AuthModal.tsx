@@ -20,7 +20,7 @@ export default function AuthModal({
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const authRootRef = useRef<HTMLDivElement | null>(null);
   const modalRef = useRef<HTMLDivElement | null>(null);
-  const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const triggerRef = useRef<Element | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -80,17 +80,19 @@ export default function AuthModal({
   }, [open, onClose]);
 
   useEffect(() => {
-    if (!open) return;
-    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    if (!open) {
+      (triggerRef.current as HTMLElement | null)?.focus?.();
+      return;
+    }
+
+    triggerRef.current = document.activeElement;
+
     const root = modalRef.current;
     if (!root) return;
     const firstFocusable = root.querySelector<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
     firstFocusable?.focus();
-    return () => {
-      lastFocusedRef.current?.focus();
-    };
   }, [open]);
 
   if (!open) return null;
