@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
   let adminForRollback: AdminClient | null = null;
   let wasOverCapBeforeAttempt = false;
   let creditRowIdToRestore: string | null = null;
+  let tier: string | null = null;
 
   try {
     const body = await request.json();
@@ -237,6 +238,7 @@ export async function POST(request: NextRequest) {
         .select("tier, status, assessments_cap")
         .eq("user_id", user.id)
         .maybeSingle();
+      tier = (sub?.tier ?? "free").toLowerCase();
 
       const userCap = resolveUserCapForAttempt(sub);
 
@@ -696,8 +698,11 @@ export async function POST(request: NextRequest) {
     let responseText: string;
     let anthropicUsage: unknown;
     try {
+      const model = (tier === "free" || !tier)
+        ? "claude-haiku-4-5-20251001"
+        : "claude-sonnet-4-20250514";
       const response = await client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model,
         max_tokens: 2000,
         system: systemWithContext,
         messages: anthropicMessages,
