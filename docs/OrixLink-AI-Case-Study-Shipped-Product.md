@@ -53,7 +53,7 @@ OrixLink sits in the gap: any symptom, any person, no prior diagnosis required, 
 
 ### A personal professional observation
 
-As a Licensed Practical Nurse with 15 years across acute care, post-acute, rehabilitation, and senior living, I work with patients who arrived at their current level of care because something was missed or delayed upstream. A patient presenting with nonspecific complaints at an urgent care clinic that has no structured way to think through a differential is a patient at risk. That observation is not from a product spec. It is from 15 years of shift work. OrixLink exists because I have seen what happens when the intake gap is not closed.
+As a healthcare operations leader and Licensed Practical Nurse (LPN) with 15+ years across acute care, post-acute, rehabilitation, and senior living, I work with patients who arrived at their current level of care because something was missed or delayed upstream. A patient presenting with nonspecific complaints at a doctor's office, urgent care clinic, or emergency room that has no structured way to think through a differential is a patient at risk. That observation is not from a product spec. It is from 15+ years of shift work on the ground, living and breathing this problem. OrixLink exists because I have seen what happens when the intake gap is not closed and health problems are not addressed properly.
 
 ### The data
 
@@ -96,7 +96,13 @@ The urgency tiers are judgment-based, encoded in the system prompt, not a shallo
 
 The output contract matters as much as the clinical logic. The system prompt enforces fixed section tokens — differential, red flags, urgency, disclaimer, follow-up prompts — that `lib/parseAssessment.ts` maps into typed UI components. That keeps share text, print output, and reminder previews predictable regardless of how the model phrases its response. The parser includes regex fallbacks for minor formatting drift. The goal is stable structure, not a claim that the model can never deviate.
 
+The tool must reason like a clinician, not like a search engine. That distinction drove every constraint that followed.
+
+**The system prompt is the product IP.** The output contract matters as much as the clinical logic. The system prompt enforces fixed section tokens that `lib/parseAssessment.ts` maps into typed UI components. The contract was defined first. The UI was built to consume it. That sequence is why share text, print output, and reminder previews are all consistent without separate formatting logic for each surface.
+
 **Monetization was designed before the first paying user.** The atomic `attempt_assessment` RPC paired with `rollback_assessment` on model failure means users do not lose a cap slot when the model errors. Credits live in a dedicated table. Stripe webhooks use a claim-after-process pattern so retries behave correctly. These are product decisions, not engineering afterthoughts.
+
+**Claude API over a fine-tuned model was a deliberate choice.** Fine-tuned clinical models require labeled training data, model hosting infrastructure, and ongoing retraining as guidelines evolve. A well-constrained general-purpose model with a production-grade system prompt achieves clinical-grade output quality while remaining maintainable by a single builder. When the model improves, the product improves automatically. That is a sustainable architecture for a product at this stage.
 
 ### The pivot stories
 
@@ -241,6 +247,9 @@ The system prompt enforces fixed section tokens that the parser maps into typed 
 
 **Step 3 — Monetization before the first user**
 Billing architecture, credit data model, and the atomic attempt/rollback RPC pairing were all designed before launch. Three real production bugs were caught and fixed during build: anonymous enforcement leakage, credit data model misalignment, and an RPC boundary error that would have consumed credits incorrectly at cap boundaries. All three are documented in the migrations and the process.
+
+**Step 4 — Delivery and validation**
+The product was validated against a real clinical scenario before marketing began. The compartment syndrome presentation matched the clinical workup. Three production-class billing bugs were diagnosed and fixed before any paying user encountered them. The launch checklist covered 28 items across clinical accuracy, billing integrity, auth flows, mobile layout, and legal compliance. This is what production readiness looks like when the builder understands what is at stake.
 
 ### Impact line
 
