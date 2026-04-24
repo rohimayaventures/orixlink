@@ -1,15 +1,6 @@
--- NOTE: Superseded by 030_canonicalize_attempt_assessment.sql.
--- 030 is the canonical migration for attempt_assessment contract.
-
--- Production sync only. Applied directly via Supabase SQL editor
--- in a prior session. Do not re-run against a live database.
--- Safe for fresh database deploys only.
---
--- This restores the jsonb version of attempt_assessment with the
--- v_used_before boundary fix and full credits path. Migration 019
--- replaced this with a boolean-returning family pool variant, but
--- production was patched back to the jsonb version directly in
--- the Supabase SQL editor.
+-- AUTHORITATIVE PRODUCTION CONTRACT (supersedes 019 and 028):
+-- public.attempt_assessment RETURNS jsonb.
+-- This migration canonically defines the contract expected by the app.
 
 CREATE OR REPLACE FUNCTION public.attempt_assessment(
   p_user_id uuid,
@@ -71,7 +62,8 @@ begin
     update credits
     set credits_remaining = credits_remaining - 1
     where id = (
-      select id from credits
+      select id
+      from credits
       where user_id = p_user_id
         and frozen_at is null
         and credits_remaining > 0
@@ -79,6 +71,7 @@ begin
       order by purchased_at asc
       limit 1
     );
+
     return jsonb_build_object(
       'allowed', true,
       'source', 'credits',
@@ -97,26 +90,3 @@ $function$;
 
 revoke all on function public.attempt_assessment(uuid, integer) from public;
 grant execute on function public.attempt_assessment(uuid, integer) to service_role;
-
-CREATE OR REPLACE FUNCTION public.rollback_assessment(
-  p_user_id uuid
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-declare
-  v_period text := to_char(now(), 'YYYY-MM');
-begin
-  update public.usage_tracking
-  set assessments_used =
-      greatest(assessments_used - 1, 0),
-      updated_at = now()
-  where user_id = p_user_id
-    and period_month = v_period;
-end;
-$$;
-
-revoke all on function public.rollback_assessment(uuid) from public;
-grant execute on function public.rollback_assessment(uuid) to service_role;

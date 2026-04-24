@@ -1,3 +1,6 @@
+-- NOTE: Superseded by 030_canonicalize_attempt_assessment.sql.
+-- 030 is the canonical migration for attempt_assessment contract.
+
 CREATE OR REPLACE FUNCTION
 public.attempt_assessment(
   p_user_id uuid,
