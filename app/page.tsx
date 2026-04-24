@@ -193,7 +193,7 @@ function LandingPageInner() {
           }}>
             <DotFilledIcon style={{ color: "var(--gold)", width: 8, height: 8, animation: "goldPulse 2.4s ease-out infinite" }} />
             <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--gold)" }}>
-              Universal Clinical Triage
+              Universal symptom guidance
             </span>
           </div>
 
@@ -202,15 +202,16 @@ function LandingPageInner() {
             color: "var(--text-on-dark)", lineHeight: 1.08, letterSpacing: "-0.02em", marginBottom: "0.25em",
           }}>
             Every symptom<br />
-            <span style={{ fontStyle: "italic", color: "var(--gold)", fontWeight: 400 }}>finds its answer.</span>
+            <span style={{ fontStyle: "italic", color: "var(--gold)", fontWeight: 400 }}>gets structured guidance.</span>
           </h1>
 
           <p className="animate-fade-up delay-200" style={{
             fontSize: "clamp(1rem, 2.5vw, 1.2rem)", color: "var(--text-muted-dark)",
             lineHeight: 1.7, maxWidth: 520, margin: "1.75rem auto 0", fontWeight: 300,
           }}>
-            Describe what you&apos;re feeling. OrixLink assesses urgency, maps possible causes,
-            and tells you exactly what to do next — any symptom, any person, no diagnosis required.
+            Describe what you&apos;re feeling. OrixLink provides AI-generated urgency guidance,
+            possible considerations, and suggested next steps to discuss with a licensed clinician
+            — any symptom, any person, no diagnosis required.
           </p>
 
           <div className="animate-fade-up delay-300" style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, marginTop: "2.75rem" }}>
@@ -294,13 +295,13 @@ function LandingPageInner() {
             {[
               {
                 icon: <MixerHorizontalIcon style={{ width: 20, height: 20 }} />,
-                title: "Clinical Intelligence",
-                body: "Ranked differential diagnoses, red flag tracking, and urgency assessment — adapted for patients, caregivers, and clinicians alike.",
+                title: "Clinical-support insights",
+                body: "Ranked possible causes for discussion with a clinician, red flag tracking, and urgency assessment — adapted for patients, caregivers, and clinicians alike.",
               },
               {
                 icon: <ChatBubbleIcon style={{ width: 20, height: 20 }} />,
                 title: "Easy to Understand",
-                body: "No medical jargon. Clear language, one action, exactly what to say when you arrive. Communication that works for everyone.",
+                body: "No medical jargon. Clear language, one action, helpful language you can share at check-in. Communication that works for everyone.",
               },
               {
                 icon: <UpdateIcon style={{ width: 20, height: 20 }} />,
@@ -342,7 +343,7 @@ function LandingPageInner() {
             {[
               { step: "01", title: "Tell us who you are", body: "Patient, caregiver, or professional — your context shapes how we respond." },
               { step: "02", title: "Describe what's happening", body: "New symptoms, chronic flare, injury, pediatric concern — anything. No prior diagnosis needed." },
-              { step: "03", title: "Get your answer", body: "Urgency level, differential possibilities, and your exact next step — clearly, without jargon." },
+              { step: "03", title: "Get a structured guidance summary", body: "Urgency level, differential possibilities, and your exact next step — clearly, without jargon." },
             ].map(({ step, title, body }) => (
               <div key={step} className="card-dark" style={{ padding: "28px 24px" }}>
                 <div className="font-mono" style={{ fontSize: "0.6875rem", letterSpacing: "0.12em", color: "var(--gold-muted)", marginBottom: "1rem" }}>
@@ -365,7 +366,7 @@ function LandingPageInner() {
             Built for every moment
           </p>
           <h2 className="font-display" style={{ textAlign: "center", fontSize: "clamp(1.75rem, 4vw, 2.75rem)", fontWeight: 400, fontStyle: "italic", color: "var(--text-on-dark)", marginBottom: "3rem" }}>
-            When you need answers, not a waiting room.
+            When you need quick guidance before care.
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
             {["Chest pain at 2am", "Child won't stop crying", "Post-surgery questions", "Medication side effects", "Chronic pain flare", "Injury assessment", "Mental health concern", "Pregnancy symptoms"].map((label) => (
@@ -383,10 +384,10 @@ function LandingPageInner() {
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <h2 className="font-display" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", fontWeight: 300, fontStyle: "italic", color: "var(--text-on-dark)", lineHeight: 1.1, marginBottom: "1.5rem" }}>
             Something feels wrong.<br />
-            <span style={{ color: "var(--gold)" }}>Let&apos;s find out what.</span>
+            <span style={{ color: "var(--gold)" }}>Let&apos;s organize what you&apos;re experiencing.</span>
           </h2>
           <p style={{ fontSize: "1rem", color: "var(--text-muted-dark)", marginBottom: "2.5rem", fontWeight: 300, lineHeight: 1.65 }}>
-            First assessment free before signup. No waiting. Just answers.
+            First assessment free before signup. No waiting. Fast informational guidance.
           </p>
           <Link href="/assessment" style={{ display: "inline-block" }}>
             <button className="btn-gold" style={{ minWidth: 240, fontSize: "0.875rem" }}>

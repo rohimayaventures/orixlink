@@ -47,6 +47,21 @@ export default function LegalOverlay() {
       >
         <p
           style={{
+            fontSize: "14px",
+            color: "rgba(244,239,230,0.7)",
+            lineHeight: 1.7,
+            marginBottom: "1.5rem",
+          }}
+        >
+          OrixLink AI is an informational symptom-guidance tool for adults and caregivers. It
+          provides AI-generated health information and suggested next steps, but it is not a
+          medical device and does not provide medical advice, diagnosis, or treatment. Using
+          OrixLink AI does not create a provider-patient relationship. Always seek care from a
+          licensed clinician for medical decisions, and if you think you may have a medical
+          emergency, call 911 or your local emergency number immediately.
+        </p>
+        <p
+          style={{
             fontSize: "11px",
             fontWeight: 600,
             textTransform: "uppercase",

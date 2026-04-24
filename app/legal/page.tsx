@@ -33,6 +33,14 @@ export default function LegalPage() {
   return (
     <AppShell contentTopPadding={96}>
       <div className="px-5 sm:px-8 pb-16" style={{ maxWidth: 720, margin: "0 auto" }}>
+        <p style={{ ...bodyStyle, marginBottom: "2rem" }}>
+          OrixLink AI is an informational symptom-guidance tool for adults and caregivers. It
+          provides AI-generated health information and suggested next steps, but it is not a
+          medical device and does not provide medical advice, diagnosis, or treatment. Using
+          OrixLink AI does not create a provider-patient relationship. Always seek care from a
+          licensed clinician for medical decisions, and if you think you may have a medical
+          emergency, call 911 or your local emergency number immediately.
+        </p>
         <Link
           href="/"
           style={{
@@ -133,7 +141,7 @@ export default function LegalPage() {
             <p style={{ marginBottom: "1rem" }}>
               OrixLink AI is operated by Hannah Kraulik Pagade, operating as Rohimaya
               Health AI, Westminster, Colorado. The service provides AI-generated
-              health information and triage guidance. It is not a licensed medical
+              health information and symptom-guidance support. It is not a licensed medical
               provider and does not practice medicine.
             </p>
             <p style={{ marginBottom: "1rem" }}>
