@@ -51,6 +51,7 @@ export async function POST() {
     const code = generateInviteCode();
     const { error } = await admin.from("family_members").insert({
       owner_user_id: user.id,
+      // Code-only invite row: email is populated on join when a member redeems the code.
       invited_email: null,
       invite_code: code,
       status: "pending",
