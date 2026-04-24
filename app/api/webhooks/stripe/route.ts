@@ -32,24 +32,33 @@ function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | undefined 
 }
 
 async function upsertSubscription(userId: string, data: Record<string, unknown>) {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('subscriptions')
     .upsert({ user_id: userId, ...data }, { onConflict: 'user_id' })
+  if (error) {
+    throw error
+  }
 }
 
 async function upsertUsageTracking(userId: string, cap: number) {
   const period = new Date().toISOString().slice(0, 7)
-  await supabaseAdmin
+  const { error: upsertErr } = await supabaseAdmin
     .from('usage_tracking')
     .upsert(
       { user_id: userId, period_month: period, assessments_cap: cap },
       { onConflict: 'user_id,period_month', ignoreDuplicates: true }
     )
-  await supabaseAdmin
+  if (upsertErr) {
+    throw upsertErr
+  }
+  const { error: updateErr } = await supabaseAdmin
     .from('usage_tracking')
     .update({ assessments_cap: cap })
     .eq('user_id', userId)
     .eq('period_month', period)
+  if (updateErr) {
+    throw updateErr
+  }
 }
 
 async function addCredits(
@@ -121,6 +130,11 @@ async function resolveWebhookUserId(args: {
   return userId
 }
 
+function failRetriable(message: string, details: Record<string, unknown>): never {
+  console.error(message, details)
+  throw new Error(message)
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
@@ -169,7 +183,10 @@ export async function POST(request: NextRequest) {
         const isLifetime = session.metadata?.is_lifetime === 'true'
 
         if (!userId) {
-          break
+          failRetriable('Webhook checkout.session.completed missing user_id', {
+            eventId: event.id,
+            customerId,
+          })
         }
 
         if (creditsAmount) {
@@ -187,13 +204,10 @@ export async function POST(request: NextRequest) {
             : NaN
 
           if (isNaN(parsedCredits) || parsedCredits <= 0) {
-            console.error(
-              'Invalid credits_amount in webhook metadata:',
+            failRetriable('Invalid credits_amount in webhook metadata', {
+              eventId: event.id,
               creditsAmount,
-              'event:',
-              event.id
-            )
-            break
+            })
           }
 
           await addCredits(
@@ -235,19 +249,18 @@ export async function POST(request: NextRequest) {
         const priceKey = sub.metadata?.price_key
 
         if (!userId) {
-          break
+          failRetriable('Webhook subscription event missing user_id', {
+            eventId: event.id,
+            eventType: event.type,
+            customerId,
+          })
         }
         if (!priceKey) {
-          console.error(
-            'Missing price_key in webhook metadata',
-            'event type:',
-            event.type,
-            'event id:',
-            event.id,
-            'userId:',
-            userId
-          )
-          break
+          failRetriable('Missing price_key in webhook metadata', {
+            eventType: event.type,
+            eventId: event.id,
+            userId,
+          })
         }
 
         const { tier, cap } = getTierFromPriceKey(priceKey)
@@ -277,7 +290,11 @@ export async function POST(request: NextRequest) {
             .not('frozen_at', 'is', null)
             .gt('credits_remaining', 0)
           if (unfreezeErr) {
-            console.error('credits unfreeze on subscription active:', unfreezeErr)
+            failRetriable('credits unfreeze on subscription active', {
+              eventId: event.id,
+              userId,
+              error: unfreezeErr,
+            })
           }
         }
         break
@@ -294,7 +311,10 @@ export async function POST(request: NextRequest) {
           eventType: event.type,
         })
         if (!userId) {
-          break
+          failRetriable('Webhook customer.subscription.deleted missing user_id', {
+            eventId: event.id,
+            customerId,
+          })
         }
 
         await upsertSubscription(userId, {
@@ -311,7 +331,11 @@ export async function POST(request: NextRequest) {
           .eq('status', 'active')
           .not('member_user_id', 'is', null)
         if (familyMembersErr) {
-          console.error('family member lookup on subscription deleted:', familyMembersErr)
+          failRetriable('family member lookup on subscription deleted failed', {
+            eventId: event.id,
+            userId,
+            error: familyMembersErr,
+          })
         }
 
         if (familyMembers && familyMembers.length > 0) {
@@ -330,7 +354,12 @@ export async function POST(request: NextRequest) {
               })
               .in('user_id', memberIds)
             if (memberSubErr) {
-              console.error('family member subscription downgrade:', memberSubErr)
+              failRetriable('family member subscription downgrade failed', {
+                eventId: event.id,
+                userId,
+                memberIds,
+                error: memberSubErr,
+              })
             }
 
             const period = new Date().toISOString().slice(0, 7)
@@ -340,7 +369,12 @@ export async function POST(request: NextRequest) {
               .in('user_id', memberIds)
               .eq('period_month', period)
             if (memberUsageErr) {
-              console.error('family member usage cap downgrade:', memberUsageErr)
+              failRetriable('family member usage cap downgrade failed', {
+                eventId: event.id,
+                userId,
+                memberIds,
+                error: memberUsageErr,
+              })
             }
           }
 
@@ -350,7 +384,11 @@ export async function POST(request: NextRequest) {
             .eq('owner_user_id', userId)
             .eq('status', 'active')
           if (familyRemoveErr) {
-            console.error('family member status removal on subscription deleted:', familyRemoveErr)
+            failRetriable('family member status removal on subscription deleted failed', {
+              eventId: event.id,
+              userId,
+              error: familyRemoveErr,
+            })
           }
         }
 
@@ -361,7 +399,11 @@ export async function POST(request: NextRequest) {
           .is('frozen_at', null)
           .gt('credits_remaining', 0)
         if (freezeErr) {
-          console.error('credits freeze on subscription deleted:', freezeErr)
+          failRetriable('credits freeze on subscription deleted failed', {
+            eventId: event.id,
+            userId,
+            error: freezeErr,
+          })
         }
         break
       }
