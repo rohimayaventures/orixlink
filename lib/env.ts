@@ -18,6 +18,7 @@ const required = [
   "STRIPE_PRICE_CREDITS_STANDARD",
   "STRIPE_PRICE_CREDITS_VALUE",
   "STRIPE_PRICE_CREDITS_POWER",
+  "SENTRY_DSN",
 ];
 
 const optional = [
@@ -50,6 +51,7 @@ export function validateEnv() {
 }
 
 export const env = {
+  sentryDsn: process.env.SENTRY_DSN!,
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
