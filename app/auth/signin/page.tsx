@@ -7,6 +7,15 @@ import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { useAuth } from "@/components/AuthProvider";
 
+function isSafeRedirect(url: string): boolean {
+  return (
+    typeof url === "string" &&
+    url.startsWith("/") &&
+    !url.startsWith("//") &&
+    !url.startsWith("/\\")
+  );
+}
+
 function AuthSignInInner() {
   const { user, loading, supabase } = useAuth();
   const router = useRouter();
@@ -15,7 +24,7 @@ function AuthSignInInner() {
 
   useEffect(() => {
     if (loading) return;
-    if (user) router.replace(redirect);
+    if (user) router.replace(isSafeRedirect(redirect) ? redirect : "/dashboard");
   }, [loading, user, redirect, router]);
 
   const redirectTo =
