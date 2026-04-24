@@ -211,7 +211,7 @@ function LandingPageInner() {
           }}>
             Describe what you&apos;re feeling. OrixLink provides AI-generated urgency guidance,
             possible considerations, and suggested next steps to discuss with a licensed clinician
-            — any symptom, any person, no diagnosis required.
+            — any symptom, any person, no prior diagnosis required.
           </p>
 
           <div className="animate-fade-up delay-300" style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 14, marginTop: "2.75rem" }}>
