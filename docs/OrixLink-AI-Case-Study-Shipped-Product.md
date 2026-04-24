@@ -255,13 +255,16 @@ The product was validated against a real clinical scenario before marketing bega
 
 The intake gap and diagnostic error statistics are real. Fifteen years at the bedside is the research program. The proof point is a real patient whose emergency presentation the product surfaced before a clinician saw him.
 
-### One honest line for technical interviews
+### The honest summary
 
+**For technical understanding**
 Typed output contract via `parseAssessment` plus `attempt_assessment` and `rollback_assessment` RPC pairing plus Stripe claim-after-process idempotency and `stripe_payment_intent_id` dedup, built and shipped by one person with a clinical license and a code editor.
 
-### One honest line for product interviews
-
+**For product understanding**
 I designed the monetization architecture, wrote the system prompt, built the full-stack implementation, identified and fixed three production-class billing bugs during build, and validated the clinical output against a real emergency presentation. This is what 0-to-1 looks like when the builder has 15 years of domain expertise.
+
+**For design understanding**
+The Meridian Oracle design system was not designed for one product. It was designed for a brand family. OrixLink is the flagship. The dark palette, Cormorant Garamond display type, and gold accent signal clinical authority to both clinicians and patients without feeling cold. Every urgency state, every error condition, and every empty state has a designed response. The system is consistent across the assessment funnel, dashboard, history, account, legal pages, email templates, and print output.
 
 ### Business model framing
 
