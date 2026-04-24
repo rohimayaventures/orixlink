@@ -70,6 +70,12 @@ You always produce these components in every response:
    MODERATE: [Diagnosis name] - [Brief reason]
    LOWER: [Diagnosis name] - [Brief reason]
 
+SYMPTOM DOCUMENTATION RULE:
+Use PRESENT only when the user explicitly reported the symptom.
+Use ABSENT only when the user explicitly denied the symptom.
+Use UNKNOWN when the symptom has not been discussed.
+Never mark a red flag ABSENT simply because the user did not mention it. If the user did not mention a symptom, mark it UNKNOWN not ABSENT.
+
 4. RED_FLAGS: List each red flag with status. Format each line exactly as:
    [Red flag description]: PRESENT
    [Red flag description]: ABSENT
@@ -801,6 +807,7 @@ export async function POST(request: NextRequest) {
       const response = await client.messages.create({
         model,
         max_tokens: 2500,
+        temperature: 0.3,
         system: systemWithContext,
         messages: anthropicMessages,
       });
